@@ -1,0 +1,92 @@
+{
+  "ssid": "",
+  "passwd": "",
+  "device_name": "beacon-01",
+  "fundamental_hz": 64.0,
+  "tines": [
+    {
+      "name": "H6",
+      "harmonic": 6,
+      "pin": 25,
+      "duty": 128
+    },
+    {
+      "name": "H5",
+      "harmonic": 5,
+      "pin": 26,
+      "duty": 128
+    },
+    {
+      "name": "H4",
+      "harmonic": 4,
+      "pin": 27,
+      "duty": 128
+    },
+    {
+      "name": "H3",
+      "harmonic": 3,
+      "pin": 14,
+      "duty": 128
+    },
+    {
+      "name": "H2",
+      "harmonic": 2,
+      "pin": 12,
+      "duty": 128
+    }
+  ],
+  "melodies": {
+    "escala": [
+      {
+        "tine": 0,
+        "dur": 1500,
+        "vel": 255
+      },
+      {
+        "tine": 1,
+        "dur": 1500,
+        "vel": 255
+      },
+      {
+        "tine": 2,
+        "dur": 1500,
+        "vel": 255
+      },
+      {
+        "tine": 3,
+        "dur": 1500,
+        "vel": 255
+      },
+      {
+        "tine": 4,
+        "dur": 1500,
+        "vel": 255
+      }
+    ],
+    "acorde": [
+      {
+        "tine": 0,
+        "dur": 5000,
+        "vel": 255
+      },
+      {
+        "tine": 2,
+        "dur": 5000,
+        "vel": 255,
+        "delay": 0
+      },
+      {
+        "tine": 4,
+        "dur": 5000,
+        "vel": 255,
+        "delay": 0
+      }
+    ]
+  },
+  "default_params": {
+    "pulse_duration_ms": 500,
+    "attack_ms": 10,
+    "decay_ms": 200,
+    "burst_count": 0
+  }
+}

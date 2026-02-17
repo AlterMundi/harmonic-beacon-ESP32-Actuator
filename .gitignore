@@ -1,0 +1,7 @@
+.pio
+.vscode
+*.pyc
+__pycache__
+.cache
+include/constants_private.h
+compile_commands.json

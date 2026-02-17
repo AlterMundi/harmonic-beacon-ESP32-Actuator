@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beacon - Kalimba Controller</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #121212;
+      color: #e0e0e0;
+      text-align: center;
+    }
+
+    h1 {
+      color: #00e676;
+      margin-bottom: 30px;
+    }
+
+    .control {
+      margin: 25px 0;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .tine-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .tine-btn {
+      padding: 20px 10px;
+      font-size: 1.2em;
+      font-weight: bold;
+      background: #2d2d2d;
+      border: 2px solid #00e676;
+      color: #00e676;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.1s;
+      touch-action: manipulation;
+    }
+
+    .tine-btn:active,
+    .tine-btn.active {
+      background: #00e676;
+      color: #121212;
+      transform: scale(0.95);
+    }
+
+    input[type=range] {
+      width: 100%;
+      margin: 15px 0;
+      accent-color: #00e676;
+    }
+
+    button.action-btn {
+      padding: 12px 24px;
+      margin: 5px;
+      cursor: pointer;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+
+    button.action-btn:hover {
+      background: #444;
+    }
+
+    button.stop-btn {
+      background: #d32f2f;
+      color: white;
+    }
+
+    button.stop-btn:hover {
+      background: #b71c1c;
+    }
+
+    .info {
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 20px;
+    }
+
+    .wifi-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #00e676;
+      text-decoration: none;
+      border-bottom: 1px dashed #00e676;
+    }
+
+    #status {
+      height: 20px;
+      color: #00e676;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🎵 Beacon</h1>
+
+  <div class="control">
+    <label>Fundamental Frequency</label>
+    <div style="font-size: 2em; color: #00e676; margin: 10px 0;"><span id="fundVal">64.0</span> Hz</div>
+    <input type="range" id="fundamental" min="1" max="512" value="64" step="0.1">
+  </div>
+
+  <div id="tines" class="tine-grid">
+    <!-- Tines injected by JS -->
+    <button class="tine-btn">Loading...</button>
+  </div>
+
+  <div class="control">
+    <h3>Manual Pulse Control</h3>
+    <label>Pulse Duration: <span id="durVal">Always On</span></label>
+    <input type="range" id="duration" min="0" max="60" value="0" step="1">
+
+    <label>Power Limit: <span id="pwrVal">128</span></label>
+    <input type="range" id="power" min="0" max="255" value="128" step="1">
+
+    <div id="manual-tines" class="tine-grid">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <div class="control">
+    <h3>Melodies</h3>
+    <button class="action-btn" onclick="playMelody('escala')">Ascending Scale</button>
+    <button class="action-btn" onclick="playMelody('acorde')">Major Chord</button>
+    <br><br>
+    <button class="action-btn stop-btn" onclick="stopAll()">🛑 STOP ALL</button>
+  </div>
+
+  <div id="status">Ready</div>
+
+  <a href="/wifi-setup" class="wifi-link">⚙️ Configure WiFi</a>
+
+  <script>
+    const fundSlider = document.getElementById('fundamental');
+    const fundVal = document.getElementById('fundVal');
+    const durSlider = document.getElementById('duration');
+    const durVal = document.getElementById('durVal');
+    const pwrSlider = document.getElementById('power');
+    const pwrVal = document.getElementById('pwrVal');
+    const statusDiv = document.getElementById('status');
+    const tinesDiv = document.getElementById('tines');
+    const manualTinesDiv = document.getElementById('manual-tines');
+
+    // Debounce freq slider
+    let timeout;
+    fundSlider.oninput = function () {
+      fundVal.textContent = parseFloat(this.value).toFixed(1);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        updateStatus('Setting frequency...');
+        fetch('/setfundamental?hz=' + this.value, { method: 'POST' })
+          .then(res => {
+            if (res.ok) updateStatus('Frequency set');
+            else updateStatus('Error');
+          });
+      }, 100);
+    };
+
+    // Duration slider (Minutes)
+    durSlider.oninput = function () {
+      if (this.value == 0) {
+        durVal.textContent = "Always On";
+        durVal.style.color = "#ff4081";
+      } else {
+        durVal.textContent = this.value + " min";
+        durVal.style.color = "#e0e0e0";
+      }
+    };
+
+    // Power Limit slider
+    pwrSlider.oninput = function () {
+      pwrVal.textContent = this.value;
+      fetch('/setduty?val=' + this.value, { method: 'POST' });
+    };
+
+    function updateStatus(msg) {
+      statusDiv.textContent = msg;
+      setTimeout(() => statusDiv.textContent = 'Ready', 2000);
+    }
+
+    function loadStatus() {
+      fetch('/status').then(r => r.json()).then(data => {
+        fundSlider.value = data.fundamental_hz;
+        fundVal.textContent = data.fundamental_hz.toFixed(1);
+
+        tinesDiv.innerHTML = '';
+        manualTinesDiv.innerHTML = '';
+
+        data.tines.forEach((t, i) => {
+          // Main Tine Button (Musical)
+          let btn = document.createElement('button');
+          btn.className = 'tine-btn';
+          btn.innerHTML = `<strong>${t.name}</strong><br><small>${t.freq.toFixed(1)}</small>`;
+          btn.onclick = () => {
+            updateStatus('Plucking ' + t.name);
+            fetch('/pluck?tine=' + i + '&vel=255', { method: 'POST' });
+          };
+          tinesDiv.appendChild(btn);
+
+          // Manual Pin Button (Technical)
+          let manBtn = document.createElement('button');
+          manBtn.className = 'tine-btn';
+          manBtn.style.borderColor = '#03a9f4';
+          manBtn.style.color = '#03a9f4';
+          // Need to fetch pin info or assume order. 
+          // Since /status doesn't return PIN numbers directly in valid JSON (checked code), 
+          // we'll rely on Tine Name or Index.
+          // Ideally updated /status to include PIN, but for now:
+          manBtn.innerHTML = `<strong>PIN [${t.name}]</strong><br><small>Tine ${i}</small>`;
+
+          manBtn.onclick = () => {
+            const minutes = parseInt(durSlider.value);
+            const d = (minutes === 0) ? 4294967295 : (minutes * 60 * 1000);
+            const label = (minutes === 0) ? "Always On" : (minutes + " min");
+
+            updateStatus(`Pulse Tine ${i} (${label})`);
+            // Using /play to hold the note for specific duration
+            fetch('/play?tine=' + i + '&vel=255&dur=' + d, { method: 'POST' });
+          };
+          manualTinesDiv.appendChild(manBtn);
+        });
+      }).catch(e => {
+        tinesDiv.innerHTML = '<p style="color:red">Connection Failed</p>';
+      });
+    }
+
+    function playMelody(name) {
+      updateStatus('Playing ' + name);
+      fetch('/melody?name=' + name, { method: 'POST' });
+    }
+
+    function stopAll() {
+      updateStatus('Stopping...');
+      fetch('/stop', { method: 'POST' });
+    }
+
+    // Initial load
+    loadStatus();
+  </script>
+</body>
+
+</html>
