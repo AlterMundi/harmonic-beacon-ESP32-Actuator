@@ -23,12 +23,16 @@ WiFiManager wifiManager;
 bool otaInitialized = false;
 #endif
 
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
+
 void printBanner() {
   DBG_INFOLN("\n  🎵 BEACON - Electromagnetic Kalimba");
   DBG_INFOLN("  Harmonic Series Controller\n");
 }
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Disable brownout detector
   DEBUG_BEGIN(115200);
   delay(1000); // Wait for serial to stabilize
   Serial.flush();

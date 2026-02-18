@@ -131,7 +131,7 @@ void handleRestart() {
 
 void handleSetFundamental() {
   float hz = server.arg("hz").toFloat();
-  if (hz < 20 || hz > 2000) {
+  if (hz < 1 || hz > 2000) {
     server.send(400, "text/plain", "Invalid frequency");
     return;
   }
