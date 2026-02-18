@@ -59,7 +59,7 @@ pio device monitor -b 115200
 
 1. **Power on ESP32** → creates AP `HarmBcon-{MAC}`
 2. **Connect** to the AP from your device
-3. Navigate to **http://192.168.4.1**
+3. Navigate to **http://192.168.11.1**
 4. **Configure WiFi** via web interface
 5. Device will reconnect and be available at its assigned IP
 
