@@ -59,7 +59,7 @@ pio device monitor -b 115200
 
 1. **Power on ESP32** → creates AP `HarmBcon-{MAC}`
 2. **Connect** to the AP from your device
-3. Navigate to **http://192.168.4.1**
+3. Navigate to **http://192.168.11.1**
 4. **Configure WiFi** via web interface
 5. Device will reconnect and be available at its assigned IP
 
@@ -155,6 +155,43 @@ beacon/
 
 - **Flash:** 947 KB (48%)
 - **RAM:** 50 KB (15%)
+
+## Troubleshooting
+
+### OTA upload falla con UFW activo
+
+ArduinoOTA abre un puerto efímero en el host para recibir la transferencia de vuelta desde el ESP. Si UFW está activo (`ENABLED=yes` en `/etc/ufw/ufw.conf`), puede bloquear esa conexión.
+
+**Solución rápida** — permitir todo tráfico desde el beacon:
+
+```bash
+sudo ufw allow from <IP-del-beacon>
+```
+
+**Solución específica** — solo el subnet WiFi al puerto OTA:
+
+```bash
+sudo ufw allow from 10.130.0.0/16 to any port 3232
+```
+
+**Solución recomendada** — fijar el puerto OTA para evitar puertos efímeros aleatorios:
+
+1. Agregar en `platformio.ini`:
+
+```ini
+[env:dev]
+upload_flags = --host_port=8266
+```
+
+2. Permitir ese puerto en UFW:
+
+```bash
+sudo ufw allow 8266/tcp
+```
+
+Con puerto fijo, la regla de firewall es estable entre sesiones.
+
+---
 
 ## Based On
 
