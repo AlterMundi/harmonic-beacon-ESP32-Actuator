@@ -4,255 +4,415 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beacon - Kalimba Controller</title>
+  <title>Beacon</title>
   <style>
+    :root {
+      --green: #00e676;
+      --blue: #03a9f4;
+      --red: #ff5252;
+      --bg: #121212;
+      --surface: #1e1e1e;
+      --surface2: #2a2a2a;
+      --text: #e0e0e0;
+      --muted: #888;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 600px;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      max-width: 480px;
       margin: 0 auto;
-      padding: 20px;
-      background: #121212;
-      color: #e0e0e0;
+      padding: 14px;
+      background: var(--bg);
+      color: var(--text);
       text-align: center;
     }
 
     h1 {
-      color: #00e676;
-      margin-bottom: 30px;
+      color: var(--green);
+      font-size: 1.4em;
+      margin-bottom: 14px;
+      letter-spacing: 2px;
     }
 
-    .control {
-      margin: 25px 0;
-      background: #1e1e1e;
-      padding: 20px;
+    .card {
+      background: var(--surface);
+      padding: 14px 16px;
       border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      margin-bottom: 10px;
     }
 
-    .tine-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-      gap: 10px;
-      margin: 20px 0;
+    .card-title {
+      font-size: 0.72em;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
     }
 
-    .tine-btn {
-      padding: 20px 10px;
-      font-size: 1.2em;
+    /* --- Fundamental --- */
+    .hz-display {
+      font-size: 2.4em;
       font-weight: bold;
-      background: #2d2d2d;
-      border: 2px solid #00e676;
-      color: #00e676;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.1s;
-      touch-action: manipulation;
-    }
-
-    .tine-btn:active,
-    .tine-btn.active {
-      background: #00e676;
-      color: #121212;
-      transform: scale(0.95);
+      color: var(--green);
+      line-height: 1;
+      margin-bottom: 6px;
     }
 
     input[type=range] {
       width: 100%;
-      margin: 15px 0;
-      accent-color: #00e676;
+      accent-color: var(--green);
+      margin: 6px 0 0;
     }
 
-    button.action-btn {
-      padding: 12px 24px;
-      margin: 5px;
+    /* --- Tine grid --- */
+    .tine-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+      gap: 8px;
+    }
+
+    .tine-btn {
+      padding: 18px 6px 14px;
+      font-weight: bold;
+      font-size: 1.05em;
+      background: var(--surface2);
+      border: 2px solid var(--green);
+      color: var(--green);
+      border-radius: 10px;
       cursor: pointer;
-      background: #333;
-      color: white;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.07s, background 0.07s, color 0.07s;
+    }
+
+    .tine-btn small {
+      display: block;
+      font-size: 0.62em;
+      font-weight: normal;
+      opacity: 0.75;
+      margin-top: 5px;
+    }
+
+    .tine-btn.held,
+    .tine-btn:active {
+      background: var(--green);
+      color: var(--bg);
+      transform: scale(0.93);
+    }
+
+    /* --- Mode toggle --- */
+    .mode-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #444;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.92em;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(0, 230, 118, 0.08);
+    }
+
+    /* --- Sliders --- */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0 4px;
+    }
+
+    .slider-label {
+      min-width: 72px;
+      text-align: left;
+      font-size: 0.85em;
+      color: var(--muted);
+    }
+
+    .slider-val {
+      min-width: 46px;
+      text-align: right;
+      font-size: 0.85em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slider-row input { flex: 1; margin: 0; }
+
+    /* --- Pattern buttons --- */
+    .pattern-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .pat-btn {
+      padding: 14px 6px;
       border: none;
-      border-radius: 25px;
-      font-size: 1rem;
-      transition: background 0.2s;
+      border-radius: 10px;
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.95em;
+      touch-action: manipulation;
+      transition: background 0.1s;
     }
 
-    button.action-btn:hover {
-      background: #444;
+    .pat-btn:hover { background: #333; }
+    .pat-btn:active { background: #444; }
+
+    .stop-btn {
+      grid-column: span 2;
+      background: #3a1010;
+      color: var(--red);
+      border: 1px solid #5a1a1a;
+      font-weight: bold;
+      font-size: 1em;
     }
 
-    button.stop-btn {
-      background: #d32f2f;
-      color: white;
-    }
+    .stop-btn:hover { background: #4a1515; }
 
-    button.stop-btn:hover {
-      background: #b71c1c;
-    }
-
-    .info {
-      font-size: 0.9em;
-      color: #888;
-      margin-top: 20px;
+    /* --- Status + footer --- */
+    #status {
+      height: 22px;
+      color: var(--green);
+      font-size: 0.88em;
+      margin: 10px 0 8px;
     }
 
     .wifi-link {
-      display: inline-block;
-      margin-top: 20px;
-      color: #00e676;
+      color: var(--muted);
       text-decoration: none;
-      border-bottom: 1px dashed #00e676;
-    }
-
-    #status {
-      height: 20px;
-      color: #00e676;
-      font-weight: bold;
+      font-size: 0.8em;
+      border-bottom: 1px dashed #444;
     }
   </style>
 </head>
 
 <body>
-  <h1>🎵 Beacon</h1>
+  <h1>🎵 BEACON</h1>
 
-  <div class="control">
-    <label>Fundamental Frequency</label>
-    <div style="font-size: 2em; color: #00e676; margin: 10px 0;"><span id="fundVal">64.0</span> Hz</div>
-    <input type="range" id="fundamental" min="1" max="500" value="64" step="0.1">
+  <!-- Afinación base -->
+  <div class="card">
+    <div class="card-title">Afinación base</div>
+    <div class="hz-display"><span id="fundVal">64.0</span> <small style="font-size:0.45em;color:var(--muted)">Hz</small></div>
+    <input type="range" id="fundamental" min="20" max="400" value="64" step="0.5">
   </div>
 
-  <div id="tines" class="tine-grid">
-    <!-- Tines injected by JS -->
-    <button class="tine-btn">Loading...</button>
-  </div>
-
-  <div class="control">
-    <h3>Manual Pulse Control</h3>
-    <label>Pulse Duration: <span id="durVal">Always On</span></label>
-    <input type="range" id="duration" min="0" max="60" value="0" step="1">
-
-    <label>Power Limit: <span id="pwrVal">128</span></label>
-    <input type="range" id="power" min="0" max="255" value="128" step="1">
-
-    <div id="manual-tines" class="tine-grid">
-      <!-- Injected by JS -->
+  <!-- Tines -->
+  <div class="card">
+    <div class="card-title">Tines</div>
+    <div id="tines" class="tine-grid">
+      <button class="tine-btn">...</button>
     </div>
   </div>
 
-  <div class="control">
-    <h3>Melodies</h3>
-    <button class="action-btn" onclick="playMelody('escala')">Ascending Scale</button>
-    <button class="action-btn" onclick="playMelody('acorde')">Major Chord</button>
-    <br><br>
-    <button class="action-btn stop-btn" onclick="stopAll()">🛑 STOP ALL</button>
+  <!-- Controles de ejecución -->
+  <div class="card">
+    <div class="card-title">Modo</div>
+    <div class="mode-row">
+      <button id="modePluck" class="mode-btn active" onclick="setMode('pluck')">⚡ Pluck</button>
+      <button id="modeSustain" class="mode-btn" onclick="setMode('sustain')">〰 Sustain</button>
+    </div>
+
+    <div class="slider-row">
+      <span class="slider-label">Velocidad</span>
+      <input type="range" id="velocity" min="1" max="255" value="150">
+      <span class="slider-val" id="velVal">150</span>
+    </div>
+
+    <div id="dur-row" class="slider-row" style="display:none">
+      <span class="slider-label">Duración</span>
+      <input type="range" id="duration" min="50" max="3000" value="500" step="50">
+      <span class="slider-val" id="durVal">500ms</span>
+    </div>
   </div>
 
-  <div id="status">Ready</div>
+  <!-- Patrones -->
+  <div class="card">
+    <div class="card-title">Patrones</div>
+    <div class="pattern-grid">
+      <button class="pat-btn" onclick="playScale('up')">▲ Escala ↑</button>
+      <button class="pat-btn" onclick="playScale('down')">▼ Escala ↓</button>
+      <button class="pat-btn" onclick="playChord()">♩ Acorde</button>
+      <button class="pat-btn" onclick="playLoop()">🔁 Loop</button>
+      <button class="pat-btn stop-btn" onclick="stopAll()">■ STOP</button>
+    </div>
+  </div>
 
-  <a href="/wifi-setup" class="wifi-link">⚙️ Configure WiFi</a>
+  <div id="status">Listo</div>
+  <a href="/wifi-setup" class="wifi-link">⚙️ Configurar WiFi</a>
 
   <script>
+    let mode = 'pluck';
+    let tineData = [];
+    let statusTimer = null;
+    let loopTimer = null;
+
+    // --- Sliders ---
     const fundSlider = document.getElementById('fundamental');
-    const fundVal = document.getElementById('fundVal');
-    const durSlider = document.getElementById('duration');
-    const durVal = document.getElementById('durVal');
-    const pwrSlider = document.getElementById('power');
-    const pwrVal = document.getElementById('pwrVal');
-    const statusDiv = document.getElementById('status');
-    const tinesDiv = document.getElementById('tines');
-    const manualTinesDiv = document.getElementById('manual-tines');
+    const velSlider  = document.getElementById('velocity');
+    const durSlider  = document.getElementById('duration');
 
-    // Debounce freq slider
-    let timeout;
-    fundSlider.oninput = function () {
-      fundVal.textContent = parseFloat(this.value).toFixed(1);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        updateStatus('Setting frequency...');
-        fetch('/setfundamental?hz=' + this.value, { method: 'POST' })
-          .then(res => {
-            if (res.ok) updateStatus('Frequency set');
-            else updateStatus('Error');
-          });
-      }, 100);
+    let fundDebounce;
+    fundSlider.oninput = () => {
+      document.getElementById('fundVal').textContent = parseFloat(fundSlider.value).toFixed(1);
+      clearTimeout(fundDebounce);
+      fundDebounce = setTimeout(() => {
+        fetch('/setfundamental?hz=' + fundSlider.value, { method: 'POST' })
+          .then(() => loadStatus()); // actualiza Hz en los botones
+      }, 200);
     };
 
-    // Duration slider (Minutes)
-    durSlider.oninput = function () {
-      if (this.value == 0) {
-        durVal.textContent = "Always On";
-        durVal.style.color = "#ff4081";
-      } else {
-        durVal.textContent = this.value + " min";
-        durVal.style.color = "#e0e0e0";
-      }
+    velSlider.oninput = () => {
+      document.getElementById('velVal').textContent = velSlider.value;
     };
 
-    // Power Limit slider
-    pwrSlider.oninput = function () {
-      pwrVal.textContent = this.value;
-      fetch('/setduty?val=' + this.value, { method: 'POST' });
+    durSlider.oninput = () => {
+      document.getElementById('durVal').textContent = durSlider.value + 'ms';
     };
 
-    function updateStatus(msg) {
-      statusDiv.textContent = msg;
-      setTimeout(() => statusDiv.textContent = 'Ready', 2000);
+    // --- Modo ---
+    function setMode(m) {
+      mode = m;
+      document.getElementById('modePluck').classList.toggle('active', m === 'pluck');
+      document.getElementById('modeSustain').classList.toggle('active', m === 'sustain');
+      document.getElementById('dur-row').style.display = m === 'sustain' ? 'flex' : 'none';
     }
 
-    function loadStatus() {
-      fetch('/status').then(r => r.json()).then(data => {
-        fundSlider.value = data.fundamental_hz;
-        fundVal.textContent = data.fundamental_hz.toFixed(1);
+    // --- Status bar ---
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => document.getElementById('status').textContent = 'Listo', 2500);
+    }
 
-        tinesDiv.innerHTML = '';
-        manualTinesDiv.innerHTML = '';
+    // --- Acción por tine ---
+    function tinePress(i, btn) {
+      const vel = parseInt(velSlider.value);
+      if (mode === 'pluck') {
+        // vel 1-255 → pulse 3-25 ms
+        const pulse = Math.round(3 + (vel / 255) * 22);
+        fetch('/pluck?tine=' + i + '&pulse=' + pulse, { method: 'POST' });
+      } else {
+        const dur = parseInt(durSlider.value);
+        fetch('/play?tine=' + i + '&vel=' + vel + '&dur=' + dur, { method: 'POST' });
+      }
+      btn.classList.add('held');
+      setStatus('♪ ' + (tineData[i] ? tineData[i].name + ' — ' + tineData[i].freq.toFixed(1) + ' Hz' : 'Tine ' + i));
+    }
 
-        data.tines.forEach((t, i) => {
-          // Main Tine Button (Musical)
-          let btn = document.createElement('button');
-          btn.className = 'tine-btn';
-          btn.innerHTML = `<strong>${t.name}</strong><br><small>${t.freq.toFixed(1)}</small>`;
-          btn.onclick = () => {
-            updateStatus('Plucking ' + t.name);
-            fetch('/pluck?tine=' + i + '&vel=255', { method: 'POST' });
-          };
-          tinesDiv.appendChild(btn);
+    function tineRelease(btn) {
+      btn.classList.remove('held');
+      // En sustain la nota sigue hasta que termine su duración; STOP para interrumpir.
+    }
 
-          // Manual Pin Button (Technical)
-          let manBtn = document.createElement('button');
-          manBtn.className = 'tine-btn';
-          manBtn.style.borderColor = '#03a9f4';
-          manBtn.style.color = '#03a9f4';
-          // Need to fetch pin info or assume order. 
-          // Since /status doesn't return PIN numbers directly in valid JSON (checked code), 
-          // we'll rely on Tine Name or Index.
-          // Ideally updated /status to include PIN, but for now:
-          manBtn.innerHTML = `<strong>PIN [${t.name}]</strong><br><small>Tine ${i}</small>`;
-
-          manBtn.onclick = () => {
-            const minutes = parseInt(durSlider.value);
-            const d = (minutes === 0) ? 4294967295 : (minutes * 60 * 1000);
-            const label = (minutes === 0) ? "Always On" : (minutes + " min");
-
-            updateStatus(`Pulse Tine ${i} (${label})`);
-            // Using /play to hold the note for specific duration
-            fetch('/play?tine=' + i + '&vel=255&dur=' + d, { method: 'POST' });
-          };
-          manualTinesDiv.appendChild(manBtn);
-        });
-      }).catch(e => {
-        tinesDiv.innerHTML = '<p style="color:red">Connection Failed</p>';
+    // --- Construir botones de tines ---
+    function buildTines(data) {
+      tineData = data;
+      const grid = document.getElementById('tines');
+      grid.innerHTML = '';
+      data.forEach((t, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'tine-btn';
+        btn.innerHTML = `<strong>${t.name}</strong><small>${t.freq.toFixed(1)} Hz</small>`;
+        // Touch (mobile)
+        btn.addEventListener('touchstart', e => { e.preventDefault(); tinePress(i, btn); }, { passive: false });
+        btn.addEventListener('touchend',   e => { e.preventDefault(); tineRelease(btn); });
+        // Mouse (desktop)
+        btn.addEventListener('mousedown', () => tinePress(i, btn));
+        btn.addEventListener('mouseup',   () => tineRelease(btn));
+        btn.addEventListener('mouseleave',() => tineRelease(btn));
+        grid.appendChild(btn);
       });
     }
 
-    function playMelody(name) {
-      updateStatus('Playing ' + name);
-      fetch('/melody?name=' + name, { method: 'POST' });
+    // --- Cargar estado inicial ---
+    function loadStatus() {
+      fetch('/status')
+        .then(r => r.json())
+        .then(data => {
+          fundSlider.value = data.fundamental_hz;
+          document.getElementById('fundVal').textContent = data.fundamental_hz.toFixed(1);
+          if (data.tines && data.tines.length > 0) buildTines(data.tines);
+        })
+        .catch(() => {
+          document.getElementById('tines').innerHTML =
+            '<p style="color:var(--red);grid-column:1/-1">Sin conexión con el beacon</p>';
+        });
+    }
+
+    // --- Patrones ---
+    async function playScale(dir) {
+      stopLoop();
+      const vel   = parseInt(velSlider.value);
+      const pulse = Math.round(3 + (vel / 255) * 22);
+      const n     = tineData.length;
+      const order = dir === 'up'
+        ? [...Array(n).keys()]
+        : [...Array(n).keys()].reverse();
+      setStatus(dir === 'up' ? '▲ Escala ascendente' : '▼ Escala descendente');
+      for (const i of order) {
+        await fetch('/pluck?tine=' + i + '&pulse=' + pulse, { method: 'POST' });
+        await new Promise(r => setTimeout(r, 220));
+      }
+    }
+
+    async function playChord() {
+      stopLoop();
+      const vel = parseInt(velSlider.value);
+      const dur = parseInt(durSlider.value);
+      setStatus('♩ Acorde');
+      await Promise.all(
+        tineData.map((_, i) =>
+          fetch('/play?tine=' + i + '&vel=' + vel + '&dur=' + dur, { method: 'POST' })
+        )
+      );
+    }
+
+    function playLoop() {
+      if (loopTimer) { stopLoop(); return; }
+      setStatus('🔁 Loop activo — toca de nuevo para detener');
+      // Loop de escala ascendente-descendente continuo
+      const vel   = parseInt(velSlider.value);
+      const pulse = Math.round(3 + (vel / 255) * 22);
+      const n     = tineData.length;
+      let step    = 0;
+      const totalSteps = n * 2 - 2; // up + down sin repetir extremos
+      function tick() {
+        const idx = step < n ? step : totalSteps - step;
+        fetch('/pluck?tine=' + idx + '&pulse=' + pulse, { method: 'POST' });
+        step = (step + 1) % totalSteps;
+        loopTimer = setTimeout(tick, 220);
+      }
+      tick();
+    }
+
+    function stopLoop() {
+      if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
     }
 
     function stopAll() {
-      updateStatus('Stopping...');
+      stopLoop();
       fetch('/stop', { method: 'POST' });
+      setStatus('■ Stop');
     }
 
-    // Initial load
+    // Iniciar
     loadStatus();
   </script>
 </body>

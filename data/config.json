@@ -8,30 +8,35 @@
       "name": "H6",
       "harmonic": 6,
       "pin": 25,
+      "channel": 0,
       "duty": 128
     },
     {
       "name": "H5",
       "harmonic": 5,
       "pin": 26,
+      "channel": 1,
       "duty": 128
     },
     {
       "name": "H4",
       "harmonic": 4,
       "pin": 27,
+      "channel": 2,
       "duty": 128
     },
     {
       "name": "H3",
       "harmonic": 3,
       "pin": 14,
+      "channel": 3,
       "duty": 128
     },
     {
       "name": "H2",
       "harmonic": 2,
       "pin": 12,
+      "channel": 4,
       "duty": 128
     }
   ],

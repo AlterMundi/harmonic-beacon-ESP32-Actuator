@@ -96,9 +96,9 @@ void setup() {
 #endif
 
   DBG_INFOLN("\n=== SYSTEM READY ===");
-  DBG_INFO("  AP: %s\n", wifiManager.getAPSSID().c_str());
-  DBG_INFOLN("  Config: http://192.168.4.1");
-  DBG_INFOLN("  Control: http://<IP>/\n");
+  DBG_INFO("  AP:     %s\n", wifiManager.getAPSSID().c_str());
+  DBG_INFO("  Config: http://%s\n", WiFi.softAPIP().toString().c_str());
+  DBG_INFOLN("  Control: http://<STA-IP>/ (disponible al conectar WiFi)\n");
 }
 
 void loop() {

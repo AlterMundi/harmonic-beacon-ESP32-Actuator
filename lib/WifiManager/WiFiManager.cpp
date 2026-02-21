@@ -191,6 +191,8 @@ void WiFiManager::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     // Setup NTP
     instance->setupNTP();
 
+    DBG_INFO("\n=== WiFi CONECTADO ===\n  Control: http://%s/\n\n",
+             WiFi.localIP().toString().c_str());
     LOG_TRACE("System is online and ready!");
     break;
 
