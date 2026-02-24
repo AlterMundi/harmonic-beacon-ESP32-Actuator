@@ -130,6 +130,18 @@ public:
     DBG_VERBOSE("[TineManager] All tines stopped\n");
   }
 
+  void setEnvelopeDefaults(uint32_t attackMs, uint32_t decayMs,
+                           uint32_t pulseMs) {
+    defaultAttackMs = attackMs;
+    defaultDecayMs = decayMs;
+    defaultPulseDurationMs = pulseMs;
+    for (auto *tine : tines) {
+      tine->setEnvelopeParams(attackMs, decayMs, pulseMs);
+    }
+    DBG_INFO("[TineManager] Envelope: attack=%d decay=%d pulse=%d ms\n",
+             attackMs, decayMs, pulseMs);
+  }
+
   void update() {
     for (auto *tine : tines) {
       tine->update();

@@ -49,7 +49,7 @@ pio run -e dev
 pio run -e dev --target upload
 
 # Upload via OTA (after first USB flash)
-pio run -e dev --target upload --upload-port beacon-01.local
+pio run -e dev --target upload --upload-port <ESP32_IP>
 
 # Monitor serial output
 pio device monitor -b 115200
@@ -114,6 +114,16 @@ Edit `/data/config.json` or use the web interface.
 | `/config` | POST | JSON body | Update configuration |
 | `/restart` | POST | — | Restart ESP32 |
 
+### OSC Control
+
+Listens on UDP port `53280` by default (configurable via `/config`).
+
+| Address | Args | Description |
+|---------|------|-------------|
+| `/play` | `tine(i)`, `vel(i)`, `dur(i)` | Play tine |
+| `/stop` | — | Stop all tines |
+| `/fundamental` | `hz(f)` | Set fundamental frequency |
+
 ## Circuit Diagram
 
 ```
@@ -138,6 +148,7 @@ beacon/
 │   ├── TineDriver.h        # Single tine PWM control
 │   ├── TineManager.h       # Multi-tine manager
 │   ├── MelodyPlayer.h      # Non-blocking sequencer
+│   ├── OscHandler.h        # OSC UDP listener
 │   ├── endpoints.h         # HTTP handlers
 │   ├── debug.h             # Debug macros
 │   ├── configFile.h        # SPIFFS config
@@ -145,6 +156,7 @@ beacon/
 ├── src/
 │   ├── main.cpp            # Setup/loop
 │   ├── endpoints.cpp       # Web interface + API
+│   ├── OscHandler.cpp      # OSC message handling
 │   ├── configFile.cpp      # Config load/save
 │   └── otaUpdater.cpp      # ArduinoOTA
 └── lib/
@@ -153,8 +165,8 @@ beacon/
 
 ## Memory Usage
 
-- **Flash:** 947 KB (48%)
-- **RAM:** 50 KB (15%)
+- **Flash:** ~979 KB (49.8%)
+- **RAM:** ~50 KB (15.4%)
 
 ## Troubleshooting
 

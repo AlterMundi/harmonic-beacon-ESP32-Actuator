@@ -71,13 +71,23 @@ public:
     attackStartTime = millis();
     isEnvelopeActive = (attackMs > 0 || decayMs > 0);
 
-    DBG_VERBOSE("[TineDriver] %s playing: %.2f Hz, duty=%d, dur=%d ms\n",
-                name.c_str(), frequency, targetDuty, durationMs);
+    // durationMs=0 → sostenido indefinido (controla el caller vía stop())
+    // durationMs>0 → auto-para después de esa duración
+    pulseDurationMs = (durationMs > 0) ? durationMs : UINT32_MAX;
 
-    // Auto-stop after duration if specified
-    if (durationMs > 0) {
-      pulseDurationMs = durationMs;
-    }
+    DBG_VERBOSE("[TineDriver] %s playing: %.2f Hz, duty=%d, dur=%s ms\n",
+                name.c_str(), frequency, targetDuty,
+                (durationMs == 0 ? "∞" : String(durationMs).c_str()));
+  }
+
+  // Direct on — no envelope, used by OSC handler
+  void sustainOn(uint8_t duty) {
+    ledcWriteTone(channel, frequency);
+    ledcWrite(channel, duty);
+    isPlaying = true;
+    isEnvelopeActive = false; // no auto-stop, no attack/decay
+    DBG_VERBOSE("[TineDriver] %s sustain ON: %.2f Hz duty=%d\n", name.c_str(),
+                frequency, duty);
   }
 
   void pluck(uint16_t pulseMs = 3) {

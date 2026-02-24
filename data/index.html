@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beacon</title>
+  <title>Beacon — Control Musical</title>
   <style>
     :root {
       --green: #00e676;
       --blue: #03a9f4;
       --red: #ff5252;
+      --orange: #ff9100;
       --bg: #121212;
       --surface: #1e1e1e;
       --surface2: #2a2a2a;
@@ -17,7 +18,11 @@
       --muted: #888;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
       font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -51,32 +56,49 @@
       margin-bottom: 10px;
     }
 
-    /* --- Fundamental --- */
+    /* --- Afinación --- */
     .hz-display {
-      font-size: 2.4em;
+      font-size: 2.6em;
       font-weight: bold;
       color: var(--green);
       line-height: 1;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
-    input[type=range] {
-      width: 100%;
+    .hz-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .hz-inputs input[type=range] {
+      flex: 1;
       accent-color: var(--green);
-      margin: 6px 0 0;
     }
 
-    /* --- Tine grid --- */
-    .tine-grid {
+    .hz-number {
+      width: 68px;
+      background: var(--surface2);
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9em;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    /* --- Armónicos --- */
+    .harmonic-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
     }
 
-    .tine-btn {
-      padding: 18px 6px 14px;
+    .harm-btn {
+      padding: 16px 4px 12px;
       font-weight: bold;
-      font-size: 1.05em;
+      font-size: 1.0em;
       background: var(--surface2);
       border: 2px solid var(--green);
       color: var(--green);
@@ -88,22 +110,29 @@
       transition: transform 0.07s, background 0.07s, color 0.07s;
     }
 
-    .tine-btn small {
+    .harm-btn small {
       display: block;
-      font-size: 0.62em;
+      font-size: 0.6em;
       font-weight: normal;
       opacity: 0.75;
-      margin-top: 5px;
+      margin-top: 4px;
     }
 
-    .tine-btn.held,
-    .tine-btn:active {
+    .harm-btn.active,
+    .harm-btn:active {
       background: var(--green);
       color: var(--bg);
       transform: scale(0.93);
     }
 
-    /* --- Mode toggle --- */
+    .harm-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      border-color: var(--muted);
+      color: var(--muted);
+    }
+
+    /* --- Modo --- */
     .mode-row {
       display: flex;
       gap: 8px;
@@ -128,7 +157,6 @@
       background: rgba(0, 230, 118, 0.08);
     }
 
-    /* --- Sliders --- */
     .slider-row {
       display: flex;
       align-items: center;
@@ -144,49 +172,79 @@
     }
 
     .slider-val {
-      min-width: 46px;
+      min-width: 52px;
       text-align: right;
       font-size: 0.85em;
       color: var(--text);
       font-variant-numeric: tabular-nums;
     }
 
-    .slider-row input { flex: 1; margin: 0; }
+    .slider-row input[type=range] {
+      flex: 1;
+      margin: 0;
+      accent-color: var(--green);
+    }
 
-    /* --- Pattern buttons --- */
-    .pattern-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    #dur-row {
+      display: none;
+    }
+
+    /* --- Melodías --- */
+    .melody-list {
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
 
-    .pat-btn {
-      padding: 14px 6px;
-      border: none;
-      border-radius: 10px;
-      background: var(--surface2);
-      color: var(--text);
-      cursor: pointer;
+    .melody-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .melody-name {
+      flex: 1;
+      text-align: left;
       font-size: 0.95em;
+    }
+
+    .mel-play-btn,
+    .mel-stop-btn {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: bold;
       touch-action: manipulation;
       transition: background 0.1s;
     }
 
-    .pat-btn:hover { background: #333; }
-    .pat-btn:active { background: #444; }
-
-    .stop-btn {
-      grid-column: span 2;
-      background: #3a1010;
-      color: var(--red);
-      border: 1px solid #5a1a1a;
-      font-weight: bold;
-      font-size: 1em;
+    .mel-play-btn {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid var(--green);
+      color: var(--green);
     }
 
-    .stop-btn:hover { background: #4a1515; }
+    .mel-play-btn.playing {
+      background: var(--green);
+      color: var(--bg);
+    }
 
-    /* --- Status + footer --- */
+    .mel-stop-btn {
+      background: #3a1010;
+      border: 1px solid #5a1a1a;
+      color: var(--red);
+    }
+
+    .melody-progress {
+      font-size: 0.75em;
+      color: var(--muted);
+      height: 16px;
+      text-align: left;
+    }
+
+    /* --- Status --- */
     #status {
       height: 22px;
       color: var(--green);
@@ -200,57 +258,182 @@
       font-size: 0.8em;
       border-bottom: 1px dashed #444;
     }
+
+    /* Settings modal */
+    #settingsModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #settingsModal.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 24px;
+      width: min(96vw, 420px);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 40px #000a;
+    }
+
+    .modal-box h2 {
+      margin: 0 0 16px;
+      font-size: 1.1em;
+      color: var(--accent);
+    }
+
+    .modal-box h3 {
+      margin: 16px 0 8px;
+      font-size: 0.85em;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .cfg-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+
+    .cfg-row label {
+      font-size: 0.88em;
+      color: #ccc;
+      flex: 1;
+    }
+
+    .cfg-row input[type=number],
+    .cfg-row input[type=text] {
+      width: 90px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      background: #1a1a2e;
+      border: 1px solid #444;
+      color: #fff;
+      font-size: 0.9em;
+      text-align: right;
+    }
+
+    .cfg-row input[type=checkbox] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .cfg-info {
+      font-size: 0.78em;
+      color: var(--muted);
+      background: #111;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+
+    #restartBanner {
+      display: none;
+      background: #7d2a00;
+      color: #ffc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.82em;
+      margin-top: 8px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.95em;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #saveBtn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #cancelBtn {
+      background: #333;
+      color: #ccc;
+    }
   </style>
 </head>
 
 <body>
-  <h1>🎵 BEACON</h1>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+    <h1 style="margin:0;">🧲 BEACON</h1>
+    <button onclick="openSettings()" title="Configuración" style="
+      background:transparent; border:1px solid #444; color:#aaa;
+      border-radius:8px; padding:6px 12px; cursor:pointer; font-size:1.2em;
+    ">⚙</button>
+  </div>
+  <button id="globalStop" onclick="globalStopAll()" style="
+    width:100%; padding:14px 0; margin-bottom:12px;
+    background:#c0392b; color:#fff; font-size:1.1em; font-weight:700;
+    border:none; border-radius:10px; cursor:pointer; letter-spacing:0.05em;
+  ">⏹ STOP</button>
 
   <!-- Afinación base -->
   <div class="card">
     <div class="card-title">Afinación base</div>
-    <div class="hz-display"><span id="fundVal">64.0</span> <small style="font-size:0.45em;color:var(--muted)">Hz</small></div>
-    <input type="range" id="fundamental" min="20" max="400" value="64" step="0.5">
-  </div>
-
-  <!-- Tines -->
-  <div class="card">
-    <div class="card-title">Tines</div>
-    <div id="tines" class="tine-grid">
-      <button class="tine-btn">...</button>
+    <div class="hz-display"><span id="fundVal">100.0</span> <small style="font-size:0.4em;color:var(--muted)">Hz</small>
+    </div>
+    <div class="hz-inputs">
+      <input type="range" id="fundSlider" min="20" max="500" value="100" step="0.5">
+      <input type="number" id="fundNumber" class="hz-number" min="20" max="500" value="100" step="1">
     </div>
   </div>
 
-  <!-- Controles de ejecución -->
+  <!-- Armónicos -->
+  <div class="card">
+    <div class="card-title">Armónicos</div>
+    <div class="harmonic-grid" id="harmonicGrid">
+      <!-- generado por JS -->
+    </div>
+  </div>
+
+  <!-- Modo -->
   <div class="card">
     <div class="card-title">Modo</div>
     <div class="mode-row">
       <button id="modePluck" class="mode-btn active" onclick="setMode('pluck')">⚡ Pluck</button>
       <button id="modeSustain" class="mode-btn" onclick="setMode('sustain')">〰 Sustain</button>
     </div>
-
     <div class="slider-row">
-      <span class="slider-label">Velocidad</span>
+      <span class="slider-label">Potencia</span>
       <input type="range" id="velocity" min="1" max="255" value="150">
       <span class="slider-val" id="velVal">150</span>
     </div>
-
-    <div id="dur-row" class="slider-row" style="display:none">
+    <div id="dur-row" class="slider-row">
       <span class="slider-label">Duración</span>
       <input type="range" id="duration" min="50" max="3000" value="500" step="50">
       <span class="slider-val" id="durVal">500ms</span>
     </div>
   </div>
 
-  <!-- Patrones -->
+  <!-- Melodías -->
   <div class="card">
-    <div class="card-title">Patrones</div>
-    <div class="pattern-grid">
-      <button class="pat-btn" onclick="playScale('up')">▲ Escala ↑</button>
-      <button class="pat-btn" onclick="playScale('down')">▼ Escala ↓</button>
-      <button class="pat-btn" onclick="playChord()">♩ Acorde</button>
-      <button class="pat-btn" onclick="playLoop()">🔁 Loop</button>
-      <button class="pat-btn stop-btn" onclick="stopAll()">■ STOP</button>
+    <div class="card-title">Melodías</div>
+    <div class="melody-list" id="melodyList">
+      <!-- generado por JS -->
     </div>
   </div>
 
@@ -258,35 +441,261 @@
   <a href="/wifi-setup" class="wifi-link">⚙️ Configurar WiFi</a>
 
   <script>
+    // ─────────────────────────────────────────────
+    // ESTADO GLOBAL
+    // ─────────────────────────────────────────────
     let mode = 'pluck';
-    let tineData = [];
+    let fundamentalHz = 100;
     let statusTimer = null;
-    let loopTimer = null;
 
-    // --- Sliders ---
-    const fundSlider = document.getElementById('fundamental');
-    const velSlider  = document.getElementById('velocity');
-    const durSlider  = document.getElementById('duration');
+    // ─────────────────────────────────────────────
+    // COMMAND QUEUE con AbortController
+    // ─────────────────────────────────────────────
+    let currentAbort = null;
+    let melodyPlaying = false;
+    let melodyAbort = null;
 
+    function abortCurrent() {
+      if (currentAbort) { currentAbort.abort(); currentAbort = null; }
+    }
+
+    function abortMelody() {
+      melodyPlaying = false;
+      if (melodyAbort) { melodyAbort.abort(); melodyAbort = null; }
+      fetch('/stop', { method: 'POST' }).catch(() => { });
+      updateMelodyUI(null);
+    }
+
+    async function abortableDelay(ms, signal) {
+      return new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, ms);
+        signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // NOTAS FRECUENCIAS
+    // ─────────────────────────────────────────────
+    // NOTE: frequencies derived from A4=440Hz equal temperament
+    const NOTE = {
+      C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, Fs4: 369.99,
+      G4: 392.00, Gs4: 415.30, A4: 440.00, As4: 466.16, B4: 493.88,
+      C5: 523.25, Cs5: 554.37, D5: 587.33, Ds5: 622.25, E5: 659.25,
+      F5: 698.46, Fs5: 739.99, G5: 783.99, Gs5: 830.61, A5: 880.00,
+      As5: 932.33, B5: 987.77, C6: 1046.50
+    };
+
+    // ─────────────────────────────────────────────
+    // MELODÍAS PREDEFINIDAS
+    // ─────────────────────────────────────────────
+    // BPM≈140, beat=428ms, 8th=214ms, 16th=107ms, 32nd=54ms
+    const BPM = 140;
+    const B = Math.round(60000 / BPM);       // quarter note ~428ms
+    const E = Math.round(B / 2);             // eighth ~214ms
+    const S = Math.round(B / 4);             // sixteenth ~107ms
+    const DS = Math.round(B / 8);             // thirty-second ~54ms
+    const DB = Math.round(B * 1.5);           // dotted quarter ~642ms
+    const R = 0;                             // rest (hz=0 → send stop)
+
+    const MELODIES = [
+      {
+        id: 'mario3',
+        name: '🍄 Super Mario Bros 3 — Overworld',
+        notes: [
+          // Main theme, monophonic transcription
+          // Intro arpeggio
+          { hz: NOTE.E5, dur: S },
+          { hz: NOTE.E5, dur: E },
+          { hz: R, dur: DS },
+          { hz: NOTE.E5, dur: E },
+          { hz: R, dur: DS },
+          { hz: NOTE.C5, dur: E },
+          { hz: NOTE.E5, dur: E },
+          { hz: NOTE.G5, dur: B },
+          { hz: NOTE.G4, dur: B },
+
+          // Phrase A
+          { hz: NOTE.C5, dur: DB },
+          { hz: NOTE.G4, dur: E },
+          { hz: NOTE.E4, dur: DB },
+          { hz: NOTE.A4, dur: E },
+          { hz: NOTE.B4, dur: E },
+          { hz: NOTE.As4, dur: S },
+          { hz: NOTE.A4, dur: E },
+
+          // G riff
+          { hz: NOTE.G4, dur: E },
+          { hz: NOTE.E5, dur: E },
+          { hz: NOTE.G5, dur: E },
+          { hz: NOTE.A5, dur: B },
+          { hz: NOTE.F5, dur: E },
+          { hz: NOTE.G5, dur: E },
+
+          { hz: R, dur: S },
+          { hz: NOTE.E5, dur: E },
+          { hz: NOTE.C5, dur: E },
+          { hz: NOTE.D5, dur: E },
+          { hz: NOTE.B4, dur: DB },
+
+          // Phrase B (repeat variant)
+          { hz: NOTE.C5, dur: DB },
+          { hz: NOTE.G4, dur: E },
+          { hz: NOTE.E4, dur: DB },
+
+          { hz: NOTE.A4, dur: E },
+          { hz: NOTE.B4, dur: E },
+          { hz: NOTE.As4, dur: S },
+          { hz: NOTE.A4, dur: E },
+
+          { hz: NOTE.G4, dur: E },
+          { hz: NOTE.E5, dur: E },
+          { hz: NOTE.G5, dur: E },
+          { hz: NOTE.A5, dur: B },
+          { hz: NOTE.F5, dur: E },
+          { hz: NOTE.G5, dur: E },
+
+          { hz: R, dur: S },
+          { hz: NOTE.E5, dur: E },
+          { hz: NOTE.C5, dur: E },
+          { hz: NOTE.D5, dur: E },
+          { hz: NOTE.B4, dur: DB },
+
+          // Bridge
+          { hz: R, dur: E },
+          { hz: NOTE.G5, dur: S },
+          { hz: NOTE.Fs5, dur: S },
+          { hz: NOTE.F5, dur: S },
+          { hz: NOTE.Ds5, dur: E },
+          { hz: NOTE.E5, dur: S },
+          { hz: R, dur: S },
+          { hz: NOTE.Gs4, dur: S },
+          { hz: NOTE.A4, dur: S },
+          { hz: NOTE.C5, dur: S },
+          { hz: R, dur: S },
+          { hz: NOTE.A4, dur: S },
+          { hz: NOTE.C5, dur: S },
+          { hz: NOTE.D5, dur: S },
+
+          { hz: R, dur: E },
+          { hz: NOTE.Gs4, dur: S },
+          { hz: NOTE.A4, dur: S },
+          { hz: NOTE.C5, dur: E },
+          { hz: R, dur: S },
+          { hz: NOTE.F5, dur: S },
+          { hz: NOTE.E5, dur: E },
+          { hz: NOTE.Ds5, dur: S },
+
+          { hz: NOTE.D5, dur: E },
+          { hz: NOTE.C5, dur: B },
+          { hz: R, dur: E },
+        ]
+      }
+    ];
+
+    // ─────────────────────────────────────────────
+    // PLAY HZ (nota individual)
+    // ─────────────────────────────────────────────
+    async function playHz(hz, options = {}) {
+      const { vel, dur, pulse, signal } = options;
+      const vel_ = vel ?? parseInt(document.getElementById('velocity').value);
+      const dur_ = dur ?? parseInt(document.getElementById('duration').value);
+      const pulse_ = pulse ?? Math.round(5 + (vel_ / 255) * 55); // 5–60 ms
+
+      let url;
+      if (hz <= 0) {
+        // rest: send stop
+        return fetch('/stop', { method: 'POST', signal }).catch(() => { });
+      }
+
+      if (mode === 'sustain') {
+        url = `/play_hz?hz=${hz.toFixed(2)}&mode=sustain&vel=${vel_}&dur=${dur_}`;
+      } else {
+        url = `/play_hz?hz=${hz.toFixed(2)}&mode=pluck&pulse=${pulse_}`;
+      }
+      return fetch(url, { method: 'POST', signal }).catch(e => {
+        if (e.name !== 'AbortError') console.error(e);
+      });
+    }
+
+    // Plays at hz WITHOUT changing the stored fundamental (for harmonic buttons)
+    async function playFreq(hz, options = {}) {
+      const { vel, dur, pulse, signal } = options;
+      const vel_ = vel ?? parseInt(document.getElementById('velocity').value);
+      const dur_ = dur ?? parseInt(document.getElementById('duration').value);
+      const pulse_ = pulse ?? Math.round(5 + (vel_ / 255) * 55);
+
+      if (hz < 20) return; // below LEDC minimum
+
+      let url;
+      if (mode === 'sustain') {
+        url = `/play_freq?hz=${hz.toFixed(2)}&mode=sustain&vel=${vel_}&dur=${dur_}`;
+      } else {
+        url = `/play_freq?hz=${hz.toFixed(2)}&mode=pluck&pulse=${pulse_}`;
+      }
+      return fetch(url, { method: 'POST', signal }).catch(e => {
+        if (e.name !== 'AbortError') console.error(e);
+      });
+    }
+
+    // GLOBAL STOP — cancels melody + sends /stop
+    function globalStopAll() {
+      if (typeof melodyAbort !== 'undefined' && melodyAbort) {
+        melodyAbort.abort(); melodyAbort = null;
+      }
+      if (typeof currentAbort !== 'undefined' && currentAbort) {
+        currentAbort.abort(); currentAbort = null;
+      }
+      fetch('/stop', { method: 'POST' }).catch(() => { });
+      const btn = document.getElementById('globalStop');
+      btn.textContent = '⏹ STOPPED';
+      setTimeout(() => { btn.textContent = '⏹ STOP'; }, 800);
+    }
+
+    // ─────────────────────────────────────────────
+    // SLIDERS — Afinación
+    // ─────────────────────────────────────────────
+    const fundSlider = document.getElementById('fundSlider');
+    const fundNumber = document.getElementById('fundNumber');
     let fundDebounce;
-    fundSlider.oninput = () => {
-      document.getElementById('fundVal').textContent = parseFloat(fundSlider.value).toFixed(1);
+
+    function setFundDisplay(hz) {
+      fundamentalHz = hz;
+      document.getElementById('fundVal').textContent = hz.toFixed(1);
+      fundSlider.value = hz;
+      fundNumber.value = Math.round(hz);
+      updateHarmonicButtons();
+    }
+
+    function sendFundamental(hz) {
       clearTimeout(fundDebounce);
       fundDebounce = setTimeout(() => {
-        fetch('/setfundamental?hz=' + fundSlider.value, { method: 'POST' })
-          .then(() => loadStatus()); // actualiza Hz en los botones
+        fetch('/setfundamental?hz=' + hz, { method: 'POST' });
       }, 200);
+    }
+
+    fundSlider.oninput = () => {
+      const hz = parseFloat(fundSlider.value);
+      setFundDisplay(hz);
+      sendFundamental(hz);
     };
 
-    velSlider.oninput = () => {
-      document.getElementById('velVal').textContent = velSlider.value;
+    fundNumber.oninput = () => {
+      let hz = parseFloat(fundNumber.value) || 1;
+      hz = Math.max(1, Math.min(500, hz));
+      setFundDisplay(hz);
+      sendFundamental(hz);
     };
 
-    durSlider.oninput = () => {
-      document.getElementById('durVal').textContent = durSlider.value + 'ms';
+    // ─────────────────────────────────────────────
+    // SLIDERS — Modo
+    // ─────────────────────────────────────────────
+    document.getElementById('velocity').oninput = function () {
+      document.getElementById('velVal').textContent = this.value;
+    };
+    document.getElementById('duration').oninput = function () {
+      document.getElementById('durVal').textContent = this.value + 'ms';
     };
 
-    // --- Modo ---
     function setMode(m) {
       mode = m;
       document.getElementById('modePluck').classList.toggle('active', m === 'pluck');
@@ -294,127 +703,284 @@
       document.getElementById('dur-row').style.display = m === 'sustain' ? 'flex' : 'none';
     }
 
-    // --- Status bar ---
-    function setStatus(msg) {
-      document.getElementById('status').textContent = msg;
-      clearTimeout(statusTimer);
-      statusTimer = setTimeout(() => document.getElementById('status').textContent = 'Listo', 2500);
-    }
+    // ─────────────────────────────────────────────
+    // BOTONES ARMÓNICOS
+    // ─────────────────────────────────────────────
+    const MULTIPLIERS = [1, 2, 3, 4, 5, 6];
 
-    // --- Acción por tine ---
-    function tinePress(i, btn) {
-      const vel = parseInt(velSlider.value);
-      if (mode === 'pluck') {
-        // vel 1-255 → pulse 3-25 ms
-        const pulse = Math.round(3 + (vel / 255) * 22);
-        fetch('/pluck?tine=' + i + '&pulse=' + pulse, { method: 'POST' });
-      } else {
-        const dur = parseInt(durSlider.value);
-        fetch('/play?tine=' + i + '&vel=' + vel + '&dur=' + dur, { method: 'POST' });
-      }
-      btn.classList.add('held');
-      setStatus('♪ ' + (tineData[i] ? tineData[i].name + ' — ' + tineData[i].freq.toFixed(1) + ' Hz' : 'Tine ' + i));
-    }
-
-    function tineRelease(btn) {
-      btn.classList.remove('held');
-      // En sustain la nota sigue hasta que termine su duración; STOP para interrumpir.
-    }
-
-    // --- Construir botones de tines ---
-    function buildTines(data) {
-      tineData = data;
-      const grid = document.getElementById('tines');
+    function buildHarmonicButtons() {
+      const grid = document.getElementById('harmonicGrid');
       grid.innerHTML = '';
-      data.forEach((t, i) => {
+      MULTIPLIERS.forEach(m => {
         const btn = document.createElement('button');
-        btn.className = 'tine-btn';
-        btn.innerHTML = `<strong>${t.name}</strong><small>${t.freq.toFixed(1)} Hz</small>`;
-        // Touch (mobile)
-        btn.addEventListener('touchstart', e => { e.preventDefault(); tinePress(i, btn); }, { passive: false });
-        btn.addEventListener('touchend',   e => { e.preventDefault(); tineRelease(btn); });
-        // Mouse (desktop)
-        btn.addEventListener('mousedown', () => tinePress(i, btn));
-        btn.addEventListener('mouseup',   () => tineRelease(btn));
-        btn.addEventListener('mouseleave',() => tineRelease(btn));
+        btn.className = 'harm-btn';
+        btn.id = 'harm-' + m;
+        const freq = fundamentalHz * m;
+        const over2k = freq > 2000;
+        btn.disabled = over2k;
+        btn.innerHTML = `<strong>×${m}</strong><small>${freq.toFixed(0)} Hz</small>`;
+        btn.addEventListener('pointerdown', async e => {
+          if (btn.disabled) return;
+          e.preventDefault();
+          abortCurrent();
+          abortMelody();
+          currentAbort = new AbortController();
+          btn.classList.add('active');
+          await playFreq(fundamentalHz * m, { signal: currentAbort.signal });
+          btn.classList.remove('active');
+        });
         grid.appendChild(btn);
       });
     }
 
-    // --- Cargar estado inicial ---
-    function loadStatus() {
+    function updateHarmonicButtons() {
+      MULTIPLIERS.forEach(m => {
+        const btn = document.getElementById('harm-' + m);
+        if (!btn) return;
+        const freq = fundamentalHz * m;
+        const over2k = freq > 2000;
+        btn.disabled = over2k;
+        btn.querySelector('small').textContent = freq.toFixed(0) + ' Hz';
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // MELODÍAS
+    // ─────────────────────────────────────────────
+    let activeMelodyId = null;
+
+    function updateMelodyUI(playingId, noteIdx = null) {
+      MELODIES.forEach(m => {
+        const btn = document.getElementById('mel-play-' + m.id);
+        const prog = document.getElementById('mel-prog-' + m.id);
+        if (!btn) return;
+        if (m.id === playingId) {
+          btn.textContent = '⏸ Detener';
+          btn.classList.add('playing');
+          if (noteIdx !== null && prog)
+            prog.textContent = `Nota ${noteIdx + 1} / ${m.notes.length}`;
+        } else {
+          btn.textContent = '▶ Play';
+          btn.classList.remove('playing');
+          if (prog) prog.textContent = '';
+        }
+      });
+    }
+
+    async function playMelody(melody) {
+      if (melodyPlaying && activeMelodyId === melody.id) {
+        abortMelody();
+        return;
+      }
+      abortCurrent();
+      abortMelody();
+
+      melodyPlaying = true;
+      activeMelodyId = melody.id;
+      melodyAbort = new AbortController();
+      const signal = melodyAbort.signal;
+
+      // ACK the server (optional log)
+      fetch('/melody_play?name=' + encodeURIComponent(melody.id), { method: 'POST', signal }).catch(() => { });
+
+      updateMelodyUI(melody.id, 0);
+      setStatus('🎵 ' + melody.name);
+
+      try {
+        for (let i = 0; i < melody.notes.length; i++) {
+          if (signal.aborted) break;
+          const note = melody.notes[i];
+          updateMelodyUI(melody.id, i);
+
+          if (note.hz > 0) {
+            const vel = parseInt(document.getElementById('velocity').value);
+            const pulse = Math.round(8 + (vel / 255) * 50); // 8–58 ms
+            await fetch(`/play_hz?hz=${note.hz.toFixed(2)}&mode=pluck&pulse=${pulse}`,
+              { method: 'POST', signal });
+          } else {
+            await fetch('/stop', { method: 'POST', signal }).catch(() => { });
+          }
+
+          await abortableDelay(note.dur, signal);
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') console.error(e);
+      }
+
+      if (!signal.aborted) {
+        fetch('/stop', { method: 'POST' }).catch(() => { });
+      }
+      melodyPlaying = false;
+      activeMelodyId = null;
+      updateMelodyUI(null);
+      setStatus('Listo');
+    }
+
+    function buildMelodyList() {
+      const list = document.getElementById('melodyList');
+      list.innerHTML = '';
+      MELODIES.forEach(mel => {
+        const item = document.createElement('div');
+        item.innerHTML = `
+          <div class="melody-item">
+            <span class="melody-name">${mel.name}</span>
+            <button id="mel-play-${mel.id}" class="mel-play-btn" onclick="playMelody(MELODIES.find(m=>m.id==='${mel.id}'))">▶ Play</button>
+          </div>
+          <div id="mel-prog-${mel.id}" class="melody-progress"></div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // STATUS BAR
+    // ─────────────────────────────────────────────
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+      clearTimeout(statusTimer);
+      if (!melodyPlaying)
+        statusTimer = setTimeout(() => document.getElementById('status').textContent = 'Listo', 3000);
+    }
+
+    // ─────────────────────────────────────────────
+    // POLLING /status (2 Hz)
+    // ─────────────────────────────────────────────
+    function pollStatus() {
       fetch('/status')
         .then(r => r.json())
         .then(data => {
-          fundSlider.value = data.fundamental_hz;
-          document.getElementById('fundVal').textContent = data.fundamental_hz.toFixed(1);
-          if (data.tines && data.tines.length > 0) buildTines(data.tines);
+          if (data.fundamental_hz && !melodyPlaying) {
+            setFundDisplay(data.fundamental_hz);
+          }
         })
-        .catch(() => {
-          document.getElementById('tines').innerHTML =
-            '<p style="color:var(--red);grid-column:1/-1">Sin conexión con el beacon</p>';
+        .catch(() => { });
+    }
+
+    // ─────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────
+    buildHarmonicButtons();
+    buildMelodyList();
+
+    fetch('/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.fundamental_hz) setFundDisplay(data.fundamental_hz);
+      })
+      .catch(() => { });
+
+    setInterval(pollStatus, 500);
+
+    // ─────────────────────────────────────────────
+    // SETTINGS MODAL
+    // ─────────────────────────────────────────────
+    function openSettings() {
+      fetch('/config').then(r => r.json()).then(cfg => {
+        document.getElementById('s_osc_enabled').checked = cfg.osc_enabled ?? true;
+        document.getElementById('s_osc_port').value = cfg.osc_port ?? 53280;
+        document.getElementById('s_osc_min_duty').value = cfg.osc_min_duty ?? 120;
+        document.getElementById('s_osc_max_duty').value = cfg.osc_max_duty ?? 220;
+        document.getElementById('s_attack_ms').value = cfg.default_params?.attack_ms ?? 10;
+        document.getElementById('s_decay_ms').value = cfg.default_params?.decay_ms ?? 200;
+        document.getElementById('s_pulse_ms').value = cfg.default_params?.pulse_duration_ms ?? 500;
+        document.getElementById('s_device_name').value = cfg.device_name ?? '';
+        document.getElementById('s_ssid').value = cfg.ssid ?? '';
+        document.getElementById('restartBanner').style.display = 'none';
+        document.getElementById('settingsModal').classList.add('open');
+      }).catch(() => alert('No se pudo leer la configuración'));
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    async function saveSettings() {
+      const payload = {
+        osc_enabled: document.getElementById('s_osc_enabled').checked,
+        osc_port: parseInt(document.getElementById('s_osc_port').value),
+        osc_min_duty: parseInt(document.getElementById('s_osc_min_duty').value),
+        osc_max_duty: parseInt(document.getElementById('s_osc_max_duty').value),
+        default_params: {
+          attack_ms: parseInt(document.getElementById('s_attack_ms').value),
+          decay_ms: parseInt(document.getElementById('s_decay_ms').value),
+          pulse_duration_ms: parseInt(document.getElementById('s_pulse_ms').value),
+        }
+      };
+      const btn = document.getElementById('saveBtn');
+      btn.textContent = 'Guardando...';
+      try {
+        const r = await fetch('/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-    }
-
-    // --- Patrones ---
-    async function playScale(dir) {
-      stopLoop();
-      const vel   = parseInt(velSlider.value);
-      const pulse = Math.round(3 + (vel / 255) * 22);
-      const n     = tineData.length;
-      const order = dir === 'up'
-        ? [...Array(n).keys()]
-        : [...Array(n).keys()].reverse();
-      setStatus(dir === 'up' ? '▲ Escala ascendente' : '▼ Escala descendente');
-      for (const i of order) {
-        await fetch('/pluck?tine=' + i + '&pulse=' + pulse, { method: 'POST' });
-        await new Promise(r => setTimeout(r, 220));
+        const res = await r.json();
+        if (res.ok) {
+          btn.textContent = '\u2713 Guardado';
+          if (res.restart_needed) {
+            document.getElementById('restartBanner').style.display = 'block';
+          } else {
+            setTimeout(closeSettings, 800);
+          }
+        } else {
+          btn.textContent = 'Error';
+        }
+      } catch (e) {
+        btn.textContent = 'Error';
       }
+      setTimeout(() => { btn.textContent = 'Guardar'; }, 2000);
     }
-
-    async function playChord() {
-      stopLoop();
-      const vel = parseInt(velSlider.value);
-      const dur = parseInt(durSlider.value);
-      setStatus('♩ Acorde');
-      await Promise.all(
-        tineData.map((_, i) =>
-          fetch('/play?tine=' + i + '&vel=' + vel + '&dur=' + dur, { method: 'POST' })
-        )
-      );
-    }
-
-    function playLoop() {
-      if (loopTimer) { stopLoop(); return; }
-      setStatus('🔁 Loop activo — toca de nuevo para detener');
-      // Loop de escala ascendente-descendente continuo
-      const vel   = parseInt(velSlider.value);
-      const pulse = Math.round(3 + (vel / 255) * 22);
-      const n     = tineData.length;
-      let step    = 0;
-      const totalSteps = n * 2 - 2; // up + down sin repetir extremos
-      function tick() {
-        const idx = step < n ? step : totalSteps - step;
-        fetch('/pluck?tine=' + idx + '&pulse=' + pulse, { method: 'POST' });
-        step = (step + 1) % totalSteps;
-        loopTimer = setTimeout(tick, 220);
-      }
-      tick();
-    }
-
-    function stopLoop() {
-      if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
-    }
-
-    function stopAll() {
-      stopLoop();
-      fetch('/stop', { method: 'POST' });
-      setStatus('■ Stop');
-    }
-
-    // Iniciar
-    loadStatus();
   </script>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal">
+    <div class="modal-box">
+      <h2>⚙ Configuración</h2>
+
+      <div class="cfg-info">
+        <span id="s_device_name"></span> — WiFi: <span id="s_ssid"></span>
+      </div>
+
+      <h3>OSC</h3>
+      <div class="cfg-row">
+        <label>Habilitado</label>
+        <input type="checkbox" id="s_osc_enabled">
+      </div>
+      <div class="cfg-row">
+        <label>Puerto (requiere reinicio)</label>
+        <input type="number" id="s_osc_port" min="1024" max="65535">
+      </div>
+      <div class="cfg-row">
+        <label>Duty mínimo (vel=0)</label>
+        <input type="number" id="s_osc_min_duty" min="0" max="255">
+      </div>
+      <div class="cfg-row">
+        <label>Duty máximo (vel=127)</label>
+        <input type="number" id="s_osc_max_duty" min="0" max="255">
+      </div>
+
+      <h3>Envolvente</h3>
+      <div class="cfg-row">
+        <label>Attack (ms)</label>
+        <input type="number" id="s_attack_ms" min="0" max="5000">
+      </div>
+      <div class="cfg-row">
+        <label>Decay (ms)</label>
+        <input type="number" id="s_decay_ms" min="0" max="10000">
+      </div>
+      <div class="cfg-row">
+        <label>Duración pulso (ms)</label>
+        <input type="number" id="s_pulse_ms" min="0" max="10000">
+      </div>
+
+      <div id="restartBanner">⚠ Puerto OSC cambiado — reiniciá el dispositivo para aplicar.</div>
+
+      <div class="modal-actions">
+        <button id="cancelBtn" onclick="closeSettings()">Cancelar</button>
+        <button id="saveBtn" onclick="saveSettings()">Guardar</button>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

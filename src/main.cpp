@@ -1,4 +1,5 @@
 #include "MelodyPlayer.h"
+#include "OscHandler.h"
 #include "TineManager.h"
 #include "configFile.h"
 #include "debug.h"
@@ -16,6 +17,7 @@
 // Global instances
 TineManager tineManager;
 MelodyPlayer melodyPlayer(&tineManager);
+OscHandler oscHandler(&tineManager);
 WebServer server(80);
 WiFiManager wifiManager;
 
@@ -99,6 +101,17 @@ void setup() {
   DBG_INFO("  AP:     %s\n", wifiManager.getAPSSID().c_str());
   DBG_INFO("  Config: http://%s\n", WiFi.softAPIP().toString().c_str());
   DBG_INFOLN("  Control: http://<STA-IP>/ (disponible al conectar WiFi)\n");
+
+  // Initialize OSC listener (after WiFi setup)
+  bool oscEnabled = config["osc_enabled"] | true;
+  uint16_t oscPort = config["osc_port"] | 53280;
+  uint8_t oscMinDuty = config["osc_min_duty"] | 120;
+  uint8_t oscMaxDuty = config["osc_max_duty"] | 220;
+  if (oscEnabled) {
+    oscHandler.begin(oscPort, oscMinDuty, oscMaxDuty);
+  } else {
+    DBG_INFOLN("[OSC] Disabled by config");
+  }
 }
 
 void loop() {
@@ -112,6 +125,9 @@ void loop() {
 
   wifiManager.update();
   server.handleClient();
+
+  // Update OSC listener
+  oscHandler.update();
 
   // Update tines (envelope processing)
   tineManager.update();
