@@ -1,47 +1,34 @@
-# Beacon — Electromagnetic Kalimba Exciter
+# Beacon – Single-Actuator Electromagnet Controller
 
-ESP32-based controller for electromagnetic excitation of kalimba tines using the natural harmonic series.
+> **Branch:** `feature/musical-controls` — 2026-02-25
+
+ESP32-based controller for electromagnetic excitation of a single tine/magnet, driven via OSC or HTTP.
 
 ## Features
 
-- **5 Tines** controlled via LEDC PWM
-- **Natural Harmonic Series** (F×1, F×2, F×3, F×4, F×5)
-- **Adjustable Fundamental** frequency via web interface  
-- **Envelope Control** (attack/decay) for each tine
-- **Web UI** with live controls and melody playback
-- **OTA Updates** (ArduinoOTA) for wireless firmware updates
-- **Melody Sequencer** with non-blocking playback
+- **Single actuator** — one electromagnet on GPIO 12, LEDC channel 0
+- **OSC control** (Surge-compatible) — `/fnote`, `/fnote/rel`, `/allnotesoff`
+- **Monophonic** — last-note-wins stack, any note-off stops immediately
+- **Configurable OSC** — port, duty range, enable/disable via `/config` or Web UI
+- **Web UI** with settings panel (gear icon) for OSC params and envelope
+- **Direct HTTP control** — `/play`, `/pluck`, `/stop`
+- **OTA Updates** (ArduinoOTA)
 - **JSON Configuration** stored in SPIFFS
 
 ## Hardware Requirements
 
-### Per Tine
-- 1× Magnetic suction cup / solenoid (5-12V)
-- 1× Logic-level MOSFET (IRLZ44N, IRLB8721, or similar)
-- 1× Flyback diode (1N4007 or Schottky)  
-- 1× 100Ω gate resistor
-
-### Power
 - ESP32 Dev Board
-- Separate 5-12V power supply for electromagnets (~500mA per active tine)
-- Common ground between ESP32 and electromagnet power supply
-
-### Default GPIO Mapping
-| Tine | Harmonic | GPIO Pin | LEDC Channel |
-|------|----------|----------|--------------|
-| H1   | ×1       | 25       | 0            |
-| H2   | ×2       | 26       | 1            |
-| H3   | ×3       | 27       | 2            |
-| H4   | ×4       | 14       | 3            |
-| H5   | ×5       | 12       | 4            |
+- 1× Solenoid / magnetic suction cup (5–12 V)
+- 1× Logic-level MOSFET (IRLZ44N, IRLB8721, or similar) on GPIO 12
+- 1× Flyback diode (1N4007 or Schottky)
+- 1× 100 Ω gate resistor
+- Separate 5–12 V power supply; common ground with ESP32
 
 ## Quick Start
 
 ### PlatformIO Build & Upload
 
 ```bash
-cd /home/pablo/repos/beacon
-
 # Build development firmware
 pio run -e dev
 
@@ -57,83 +44,125 @@ pio device monitor -b 115200
 
 ### Initial Setup
 
-1. **Power on ESP32** → creates AP `HarmBcon-{MAC}`
-2. **Connect** to the AP from your device
+1. Power on ESP32 → creates AP `HarmBcon-{MAC}`
+2. Connect to the AP
 3. Navigate to **http://192.168.11.1**
-4. **Configure WiFi** via web interface
-5. Device will reconnect and be available at its assigned IP
+4. Configure WiFi via web interface
+5. Device reconnects and is available at its assigned IP / `http://harmbeacon.local/`
 
 ### Web Interface
 
-Access at `http://<ESP32_IP>/` or `http://harmbeacon.local/`
+Access at `http://<ESP32_IP>/`
 
-**Features:**
-- **Fundamental slider** — adjusts base frequency (recalculates all harmonics)
-- **Tine buttons** — click to play individual tones
-- **Melody controls** — play preset sequences ("Scale", "Chord")
-- **Status display** — shows current frequencies
+- **Gear icon** → Settings modal: OSC port, min/max duty, enable toggle, envelope params
+- **Tine button** — direct HTTP play
+- **Status** — current frequency and duty
 
 ## Configuration
 
-Edit `/data/config.json` or use the web interface.
+Edit `data/config.json` (uploaded via SPIFFS) or use `POST /config`.
 
-**Example config:**
 ```json
 {
-  "fundamental_hz": 64.0,
+  "ssid": "",
+  "passwd": "",
+  "device_name": "beacon-01",
+  "fundamental_hz": 100.0,
   "tines": [
-    {"name": "H1", "harmonic": 1, "pin": 25, "channel": 0, "duty": 128},
-    {"name": "H2", "harmonic": 2, "pin": 26, "channel": 1, "duty": 128}
+    {"name": "Magnet", "harmonic": 1, "pin": 12, "channel": 0, "duty": 180}
   ],
-  "melodies": {
-    "escala": [
-      {"tine": 0, "dur": 500, "vel": 200},
-      {"tine": 1, "dur": 500, "vel": 200}
-    ]
-  },
   "default_params": {
     "pulse_duration_ms": 500,
     "attack_ms": 10,
-    "decay_ms": 200
-  }
+    "decay_ms": 200,
+    "burst_count": 0
+  },
+  "osc_enabled": true,
+  "osc_port": 53280,
+  "osc_min_duty": 120,
+  "osc_max_duty": 220
 }
 ```
 
 ## HTTP API
 
-| Endpoint | Method | Parameters | Description |
-|----------|--------|------------|-------------|
-| `/` | GET | — | Web interface |
-| `/status` | GET | — | JSON status (frequencies, playing state) |
-| `/play` | POST | `tine`, `vel`, `dur` | Play tone |
-| `/pluck` | POST | `tine`, `pulse` | Percussive pulse |
-| `/stop` | POST | — | Stop all tines |
-| `/melody` | POST | `name` | Play saved melody |
-| `/setfundamental` | POST | `hz` | Change fundamental frequency |
-| `/config` | GET | — | View configuration |
-| `/config` | POST | JSON body | Update configuration |
-| `/restart` | POST | — | Restart ESP32 |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Web interface |
+| `/status` | GET | JSON status |
+| `/play` | POST | Play tine (`tine`, `vel`, `dur`) |
+| `/pluck` | POST | Percussive pulse (`tine`, `pulse`) |
+| `/stop` | POST | Stop all |
+| `/config` | GET | View full configuration |
+| `/config` | POST | Update configuration (JSON body) |
+| `/restart` | POST | Restart ESP32 |
 
-### OSC Control
+### Examples
+
+```bash
+# Read config
+curl http://harmbeacon.local/config
+
+# Update OSC port and duty range
+curl -X POST http://harmbeacon.local/config \
+  -H "Content-Type: application/json" \
+  -d '{"osc_port": 53280, "osc_min_duty": 100, "osc_max_duty": 230}'
+
+# Restart
+curl -X POST http://harmbeacon.local/restart
+```
+
+## OSC Control
 
 Listens on UDP port `53280` by default (configurable via `/config`).
 
+### Addresses
+
 | Address | Args | Description |
 |---------|------|-------------|
-| `/play` | `tine(i)`, `vel(i)`, `dur(i)` | Play tine |
-| `/stop` | — | Stop all tines |
-| `/fundamental` | `hz(f)` | Set fundamental frequency |
+| `/fnote` | `freq(f)`, `vel(f)`, `[noteID(f)]` | Note-on at exact frequency |
+| `/fnote/rel` | `freq(f)`, `vel(f)`, `[noteID(f)]` | Note-off |
+| `/allnotesoff` | — | Panic — stops all |
+
+### Parameters
+
+- `freq` — frequency in Hz (20–2000 Hz; out-of-range ignored)
+- `vel` — velocity 0–127 (Surge convention); `vel=0` on `/fnote` is treated as note-off
+- `noteID` — optional float; used to track polyphonic note identity in the stack
+
+### Velocity → Duty Mapping
+
+Velocity is linearly mapped to PWM duty:
+
+```
+duty = osc_min_duty + (vel / 127) × (osc_max_duty - osc_min_duty)
+```
+
+### Voice Logic
+
+Monophonic, last-note-wins. Any `/fnote/rel` or `/allnotesoff` stops the actuator immediately.
+
+### Configuration
+
+OSC parameters can be set live via `/config` POST or the Settings modal in the Web UI:
+
+| Field | Description |
+|-------|-------------|
+| `osc_enabled` | Enable/disable OSC listener |
+| `osc_port` | UDP listen port |
+| `osc_min_duty` | Duty for vel=0 (0–255) |
+| `osc_max_duty` | Duty for vel=127 (0–255) |
 
 ## Circuit Diagram
 
 ```
-ESP32 GPIO ──[100Ω]──→ MOSFET Gate (IRLZ44N)
-                        │
-                   Drain ──→ Electromagnet (+)
-                        │         │
-                   Source ──→ GND  VCC (5-12V)
-                                  ↓
-                          Diode 1N4007 (cathode to VCC)
+ESP32 GPIO 12 ──[100Ω]──→ MOSFET Gate (IRLZ44N)
+                            │
+                       Drain ──→ Electromagnet (+)
+                            │         │
+                       Source ──→ GND  VCC (5-12V)
+                                       ↓
+                              Diode 1N4007 (cathode to VCC)
 ```
 
 ## Project Structure
@@ -146,21 +175,20 @@ beacon/
 │   └── config.json         # Runtime configuration
 ├── include/
 │   ├── TineDriver.h        # Single tine PWM control
-│   ├── TineManager.h       # Multi-tine manager
-│   ├── MelodyPlayer.h      # Non-blocking sequencer
+│   ├── TineManager.h       # Tine manager
 │   ├── OscHandler.h        # OSC UDP listener
 │   ├── endpoints.h         # HTTP handlers
-│   ├── debug.h             # Debug macros
 │   ├── configFile.h        # SPIFFS config
+│   ├── debug.h             # Debug macros
 │   └── otaUpdater.h        # OTA support
 ├── src/
-│   ├── main.cpp            # Setup/loop
+│   ├── main.cpp
 │   ├── endpoints.cpp       # Web interface + API
 │   ├── OscHandler.cpp      # OSC message handling
 │   ├── configFile.cpp      # Config load/save
 │   └── otaUpdater.cpp      # ArduinoOTA
 └── lib/
-    └── WiFiManager/         # WiFi management
+    └── WiFiManager/
 ```
 
 ## Memory Usage
@@ -172,7 +200,7 @@ beacon/
 
 ### OTA upload falla con UFW activo
 
-ArduinoOTA abre un puerto efímero en el host para recibir la transferencia de vuelta desde el ESP. Si UFW está activo (`ENABLED=yes` en `/etc/ufw/ufw.conf`), puede bloquear esa conexión.
+ArduinoOTA abre un puerto efímero en el host para recibir la transferencia de vuelta desde el ESP. Si UFW está activo, puede bloquear esa conexión.
 
 **Solución rápida** — permitir todo tráfico desde el beacon:
 
@@ -180,13 +208,13 @@ ArduinoOTA abre un puerto efímero en el host para recibir la transferencia de v
 sudo ufw allow from <IP-del-beacon>
 ```
 
-**Solución específica** — solo el subnet WiFi al puerto OTA:
+**Solución específica** — solo el subnet al puerto OTA:
 
 ```bash
 sudo ufw allow from 10.130.0.0/16 to any port 3232
 ```
 
-**Solución recomendada** — fijar el puerto OTA para evitar puertos efímeros aleatorios:
+**Solución recomendada** — fijar el puerto OTA:
 
 1. Agregar en `platformio.ini`:
 
@@ -200,8 +228,6 @@ upload_flags = --host_port=8266
 ```bash
 sudo ufw allow 8266/tcp
 ```
-
-Con puerto fijo, la regla de firewall es estable entre sesiones.
 
 ---
 
