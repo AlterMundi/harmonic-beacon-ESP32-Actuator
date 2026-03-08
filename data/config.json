@@ -8,18 +8,21 @@
       "name": "Tine64",
       "harmonic": 1,
       "pin": 25,
+      "channel": 0,
       "duty": 128
     },
     {
       "name": "Tine192",
       "harmonic": 3,
       "pin": 27,
+      "channel": 2,
       "duty": 128
     },
     {
       "name": "Tine320",
       "harmonic": 5,
       "pin": 12,
+      "channel": 4,
       "duty": 128
     }
   ],

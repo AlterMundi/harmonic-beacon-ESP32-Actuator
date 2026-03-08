@@ -57,7 +57,12 @@ public:
       String name = tineCfg["name"] | "Unknown";
       uint8_t harmonic = tineCfg["harmonic"] | 1;
       uint8_t pin = tineCfg["pin"] | 0;
-      uint8_t channel = tineCfg["channel"] | 0;
+      uint8_t channel;
+      if (tineCfg.containsKey("channel")) {
+        channel = tineCfg["channel"].as<uint8_t>();
+      } else {
+        channel = tines.size() * 2; // Channels 0, 2, 4 use distinct timers
+      }
       uint8_t duty = tineCfg["duty"] | 128;
 
       if (pin == 0 || channel > 15) {
