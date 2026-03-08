@@ -74,8 +74,10 @@ public:
     DBG_VERBOSE("[TineDriver] %s playing: %.2f Hz, duty=%d, dur=%d ms\n",
                 name.c_str(), frequency, targetDuty, durationMs);
 
-    // Auto-stop after duration if specified
-    if (durationMs > 0) {
+    // Auto-stop after duration if specified. 0 = infinite sustain.
+    if (durationMs == 0) {
+      pulseDurationMs = UINT32_MAX;
+    } else {
       pulseDurationMs = durationMs;
     }
   }
