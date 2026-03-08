@@ -249,6 +249,9 @@ void setupEndpoints(WebServer &srv) {
   srv.on("/restart", HTTP_POST, handleRestart);
   srv.on("/setfundamental", HTTP_POST, handleSetFundamental);
   srv.on("/setduty", HTTP_POST, handleSetDuty);
+  srv.on("/play_hz", HTTP_POST, handlePlayHz);
+  srv.on("/play_freq", HTTP_POST, handlePlayFreq);
+  srv.on("/melody_play", HTTP_POST, handleMelodyPlay);
 
   // Favicon
   srv.on("/favicon.ico", HTTP_GET, []() {
