@@ -21,13 +21,15 @@ private:
   uint32_t pulseDurationMs;
   bool isInitialized;
   bool isEnvelopeActive;
+  bool isPlucking;
+  uint16_t currentPulseMs;
 
 public:
   TineDriver(uint8_t _pin, uint8_t _channel, String _name, uint8_t _harmonic)
       : pin(_pin), channel(_channel), name(_name), harmonic(_harmonic),
         frequency(0), dutyCycle(128), isPlaying(false), isEnvelopeActive(false),
-        attackMs(10), decayMs(200), pulseDurationMs(500), isInitialized(false) {
-  } // Initialize new member
+        isPlucking(false), currentPulseMs(0), attackMs(10), decayMs(200),
+        pulseDurationMs(500), isInitialized(false) {} // Initialize new member
 
   // Original init() method
   bool init() {
@@ -67,6 +69,7 @@ public:
     ledcWriteTone(channel, frequency);
     ledcWrite(channel, targetDuty);
     isPlaying = true;
+    isPlucking = false;
 
     attackStartTime = millis();
     isEnvelopeActive = (attackMs > 0 || decayMs > 0);
@@ -85,8 +88,12 @@ public:
   void pluck(uint16_t pulseMs = 3) {
     ledcWriteTone(channel, frequency);
     ledcWrite(channel, dutyCycle);
-    delay(pulseMs);
-    ledcWrite(channel, 0);
+
+    isPlaying = true;
+    isPlucking = true;
+    isEnvelopeActive = false;
+    currentPulseMs = pulseMs;
+    attackStartTime = millis(); // Reuse for tracking when pluck started
 
     DBG_VERBOSE("[TineDriver] %s plucked: %.2f Hz, %d ms\n", name.c_str(),
                 frequency, pulseMs);
@@ -96,15 +103,26 @@ public:
     ledcWrite(channel, 0);
     isPlaying = false;
     isEnvelopeActive = false;
+    isPlucking = false;
     DBG_VERBOSE("[TineDriver] %s stopped\n", name.c_str());
   }
 
   void update() {
-    if (!isPlaying || !isEnvelopeActive)
+    if (!isPlaying)
       return;
 
     unsigned long now = millis();
     unsigned long elapsed = now - attackStartTime;
+
+    if (isPlucking) {
+      if (elapsed >= currentPulseMs) {
+        stop();
+      }
+      return;
+    }
+
+    if (!isEnvelopeActive)
+      return;
 
     // Attack phase
     if (elapsed < attackMs) {
