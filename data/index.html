@@ -662,7 +662,9 @@
       fundamentalHz = hz;
       document.getElementById('fundVal').textContent = hz.toFixed(1);
       fundSlider.value = hz;
-      fundNumber.value = Math.round(hz);
+      if (document.activeElement !== fundNumber) {
+        fundNumber.value = hz.toFixed(1);
+      }
       updateHarmonicButtons();
     }
 
@@ -679,9 +681,10 @@
       sendFundamental(hz);
     };
 
-    fundNumber.oninput = () => {
-      let hz = parseFloat(fundNumber.value) || 1;
-      hz = Math.max(1, Math.min(500, hz));
+    fundNumber.onchange = () => {
+      let hz = parseFloat(fundNumber.value);
+      if (isNaN(hz) || hz < 20) hz = 20;
+      if (hz > 2000) hz = 2000;
       setFundDisplay(hz);
       sendFundamental(hz);
     };
@@ -693,7 +696,8 @@
       document.getElementById('velVal').textContent = this.value;
     };
     document.getElementById('duration').oninput = function () {
-      document.getElementById('durVal').textContent = this.value + 'ms';
+      const v = parseInt(this.value);
+      document.getElementById('durVal').textContent = v === 0 ? '∞' : v + 'ms';
     };
 
     function setMode(m) {

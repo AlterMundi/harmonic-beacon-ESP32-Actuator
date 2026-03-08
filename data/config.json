@@ -5,32 +5,20 @@
   "fundamental_hz": 64.0,
   "tines": [
     {
-      "name": "H6",
-      "harmonic": 6,
+      "name": "Tine64",
+      "harmonic": 1,
       "pin": 25,
       "duty": 128
     },
     {
-      "name": "H5",
-      "harmonic": 5,
-      "pin": 26,
-      "duty": 128
-    },
-    {
-      "name": "H4",
-      "harmonic": 4,
+      "name": "Tine192",
+      "harmonic": 3,
       "pin": 27,
       "duty": 128
     },
     {
-      "name": "H3",
-      "harmonic": 3,
-      "pin": 14,
-      "duty": 128
-    },
-    {
-      "name": "H2",
-      "harmonic": 2,
+      "name": "Tine320",
+      "harmonic": 5,
       "pin": 12,
       "duty": 128
     }
@@ -51,16 +39,6 @@
         "tine": 2,
         "dur": 1500,
         "vel": 255
-      },
-      {
-        "tine": 3,
-        "dur": 1500,
-        "vel": 255
-      },
-      {
-        "tine": 4,
-        "dur": 1500,
-        "vel": 255
       }
     ],
     "acorde": [
@@ -70,13 +48,13 @@
         "vel": 255
       },
       {
-        "tine": 2,
+        "tine": 1,
         "dur": 5000,
         "vel": 255,
         "delay": 0
       },
       {
-        "tine": 4,
+        "tine": 2,
         "dur": 5000,
         "vel": 255,
         "delay": 0
