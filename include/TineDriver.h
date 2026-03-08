@@ -109,9 +109,13 @@ public:
       uint8_t currentDuty = map(elapsed, 0, attackMs, 0, dutyCycle);
       ledcWrite(channel, currentDuty);
     }
-    // Sustain phase
+    // Infinite sustain — hold at full duty, no decay/auto-stop
+    else if (pulseDurationMs == UINT32_MAX) {
+      ledcWrite(channel, dutyCycle);
+      isEnvelopeActive = false; // attack done, just hold
+    }
+    // Timed sustain phase
     else if (elapsed < attackMs + pulseDurationMs) {
-      // Hold at full duty
       ledcWrite(channel, dutyCycle);
     }
     // Decay phase

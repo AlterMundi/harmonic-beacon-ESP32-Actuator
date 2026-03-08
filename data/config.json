@@ -88,5 +88,9 @@
     "attack_ms": 10,
     "decay_ms": 200,
     "burst_count": 0
-  }
+  },
+  "osc_enabled": true,
+  "osc_port": 53280,
+  "osc_min_duty": 120,
+  "osc_max_duty": 255
 }

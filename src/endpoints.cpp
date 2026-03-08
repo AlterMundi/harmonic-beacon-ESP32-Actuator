@@ -153,6 +153,86 @@ void handleSetDuty() {
   server.send(200, "text/plain", "OK");
 }
 
+// POST /play_hz?hz=<float>&mode=<pluck|sustain>&vel=<0-255>&dur=<ms>&pulse=<ms>
+// Atomically: setFundamental(hz) + playNote or pluckNote on tine 0
+void handlePlayHz() {
+  float hz = server.arg("hz").toFloat();
+  if (hz < 1 || hz > 2000) {
+    server.send(400, "application/json",
+                "{\"error\":\"hz out of range [1,2000]\"}");
+    return;
+  }
+  tineManager.setFundamental(hz);
+
+  String mode = server.hasArg("mode") ? server.arg("mode") : "pluck";
+  if (mode == "sustain") {
+    uint8_t vel = server.hasArg("vel")
+                      ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255)
+                      : 200;
+    uint32_t dur = server.hasArg("dur")
+                       ? (uint32_t)constrain(server.arg("dur").toInt(), 0, 3000)
+                       : 0;
+    tineManager.playNote(0, vel, dur);
+  } else {
+    uint16_t pulse =
+        server.hasArg("pulse")
+            ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
+            : 30;
+    tineManager.pluckNote(0, pulse);
+  }
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
+// POST
+// /play_freq?hz=<float>&mode=<pluck|sustain>&vel=<0-255>&dur=<ms>&pulse=<ms>
+// Plays tine 0 at the given frequency WITHOUT touching the stored fundamental.
+static void handlePlayFreq() {
+  if (!server.hasArg("hz")) {
+    server.send(400, "text/plain", "missing hz");
+    return;
+  }
+  float hz = server.arg("hz").toFloat();
+  if (hz < 20.0f) {
+    server.send(400, "text/plain", "hz must be >= 20");
+    return;
+  }
+
+  String mode_ = server.hasArg("mode") ? server.arg("mode") : "pluck";
+  uint8_t vel = server.hasArg("vel")
+                    ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255)
+                    : 200;
+  uint32_t dur = server.hasArg("dur")
+                     ? (uint32_t)constrain(server.arg("dur").toInt(), 0, 3000)
+                     : 0;
+  uint16_t pulse =
+      server.hasArg("pulse")
+          ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
+          : 30;
+
+  TineDriver *t0 = tineManager.getTine(0);
+  if (t0 == nullptr) {
+    server.send(500, "text/plain", "tine 0 not available");
+    return;
+  }
+
+  t0->setFrequency(hz); // only changes LEDC, not fundamentalHz
+
+  if (mode_ == "sustain") {
+    tineManager.playNote(0, vel, dur);
+  } else {
+    tineManager.pluckNote(0, pulse);
+  }
+  server.send(200, "text/plain", "OK");
+}
+
+// POST /melody_play?name=<string>  — ACK only; sequencing runs in JS
+void handleMelodyPlay() {
+  String name = server.hasArg("name") ? server.arg("name") : "unknown";
+  DBG_INFO("[Melody] Playing: %s (client-side sequencer)\n", name.c_str());
+  String resp = "{\"ok\":true,\"name\":\"" + name + "\"}";
+  server.send(200, "application/json", resp);
+}
+
 void setupEndpoints(WebServer &srv) {
   // Kalimba interface (Home)
   srv.on("/", HTTP_GET, handleHome);
