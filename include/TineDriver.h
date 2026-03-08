@@ -10,6 +10,7 @@ private:
   uint8_t channel;
   float frequency;
   uint8_t dutyCycle;
+  uint8_t currentTargetDuty;
   String name;
   uint8_t harmonic;
   bool isPlaying;
@@ -27,9 +28,10 @@ private:
 public:
   TineDriver(uint8_t _pin, uint8_t _channel, String _name, uint8_t _harmonic)
       : pin(_pin), channel(_channel), name(_name), harmonic(_harmonic),
-        frequency(0), dutyCycle(128), isPlaying(false), isEnvelopeActive(false),
-        isPlucking(false), currentPulseMs(0), attackMs(10), decayMs(200),
-        pulseDurationMs(500), isInitialized(false) {} // Initialize new member
+        frequency(0), dutyCycle(128), currentTargetDuty(128), isPlaying(false),
+        isEnvelopeActive(false), isPlucking(false), currentPulseMs(0),
+        attackMs(10), decayMs(200), pulseDurationMs(500), isInitialized(false) {
+  } // Initialize new member
 
   // Original init() method
   bool init() {
@@ -41,6 +43,8 @@ public:
   }
 
   void setFrequency(float freq) {
+    if (frequency == freq)
+      return; // Prevent unnecessary LEDC reconfiguration
     frequency = freq;
     if (isInitialized && frequency >= 20) {
       ledcSetup(channel, frequency, 8); // 8-bit resolution
@@ -64,18 +68,7 @@ public:
   }
 
   void playTone(uint8_t velocity, uint32_t durationMs = 0) {
-    uint8_t targetDuty = map(velocity, 0, 255, 0, dutyCycle);
-
-    ledcWriteTone(channel, frequency);
-    ledcWrite(channel, targetDuty);
-    isPlaying = true;
-    isPlucking = false;
-
-    attackStartTime = millis();
-    isEnvelopeActive = (attackMs > 0 || decayMs > 0);
-
-    DBG_VERBOSE("[TineDriver] %s playing: %.2f Hz, duty=%d, dur=%d ms\n",
-                name.c_str(), frequency, targetDuty, durationMs);
+    currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
 
     // Auto-stop after duration if specified. 0 = infinite sustain.
     if (durationMs == 0) {
@@ -83,11 +76,35 @@ public:
     } else {
       pulseDurationMs = durationMs;
     }
+
+    // Determine initial duty (start at 0 if Attack is configured to prevent
+    // Pops)
+    uint8_t initialDuty = (attackMs > 0) ? 0 : currentTargetDuty;
+
+    // Only update tone if frequency is valid and not already playing the same
+    // frequency
+    if (frequency >= 20) {
+      ledcWriteTone(channel, frequency);
+    }
+    ledcWrite(channel, initialDuty);
+    isPlaying = true;
+    isPlucking = false;
+
+    attackStartTime = millis();
+    isEnvelopeActive = (attackMs > 0 || decayMs > 0);
+
+    DBG_VERBOSE("[TineDriver] %s playing: %.2f Hz, duty=%d, dur=%d ms\n",
+                name.c_str(), frequency, currentTargetDuty, durationMs);
   }
 
   void pluck(uint16_t pulseMs = 3) {
-    ledcWriteTone(channel, frequency);
-    ledcWrite(channel, dutyCycle);
+    currentTargetDuty = dutyCycle; // Plucks use full configured duty
+    // Only update tone if frequency is valid and not already playing the same
+    // frequency
+    if (frequency >= 20) {
+      ledcWriteTone(channel, frequency);
+    }
+    ledcWrite(channel, currentTargetDuty);
 
     isPlaying = true;
     isPlucking = true;
@@ -126,22 +143,22 @@ public:
 
     // Attack phase
     if (elapsed < attackMs) {
-      uint8_t currentDuty = map(elapsed, 0, attackMs, 0, dutyCycle);
+      uint8_t currentDuty = map(elapsed, 0, attackMs, 0, currentTargetDuty);
       ledcWrite(channel, currentDuty);
     }
-    // Infinite sustain — hold at full duty, no decay/auto-stop
+    // Infinite sustain — hold at calculated velocity duty
     else if (pulseDurationMs == UINT32_MAX) {
-      ledcWrite(channel, dutyCycle);
+      ledcWrite(channel, currentTargetDuty);
       isEnvelopeActive = false; // attack done, just hold
     }
     // Timed sustain phase
     else if (elapsed < attackMs + pulseDurationMs) {
-      ledcWrite(channel, dutyCycle);
+      ledcWrite(channel, currentTargetDuty);
     }
     // Decay phase
     else if (elapsed < attackMs + pulseDurationMs + decayMs) {
       unsigned long decayElapsed = elapsed - (attackMs + pulseDurationMs);
-      uint8_t currentDuty = map(decayElapsed, 0, decayMs, dutyCycle, 0);
+      uint8_t currentDuty = map(decayElapsed, 0, decayMs, currentTargetDuty, 0);
       ledcWrite(channel, currentDuty);
     }
     // Finished
