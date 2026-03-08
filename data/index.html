@@ -678,9 +678,45 @@
               Activo
             </label>
           </div>
+          // Frecuencia
           <div class="hz-inputs" style="margin-top:0;">
-            <input type="range" id="tine-hz-${i}" min="20" max="2000" value="${t.freq.toFixed(1)}" step="0.5" style="margin:0; flex:1;">
-            <input type="number" id="tine-num-${i}" class="hz-number" min="20" max="2000" value="${t.freq.toFixed(1)}" step="1" style="width:70px; margin-left:10px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; color: #888;">Frecuencia (Hz)</label>
+              <div style="display: flex;">
+                <input type="range" id="tine-hz-${i}" min="20" max="2000" value="${t.freq.toFixed(1)}" step="0.5" style="margin:0; flex:1;">
+                <input type="number" id="tine-num-${i}" class="hz-number" min="20" max="2000" value="${t.freq.toFixed(1)}" step="1" style="width:70px; margin-left:10px;">
+              </div>
+            </div>
+          </div>
+          // Potencia (Velocidad)
+          <div class="hz-inputs" style="margin-top:0;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; color: #888;">Potencia (0-255)</label>
+              <div style="display: flex;">
+                <input type="range" id="tine-vel-${i}" min="0" max="255" value="255" step="1" style="margin:0; flex:1;">
+                <span id="tine-vel-lbl-${i}" style="width:40px; text-align:right; font-size:12px;">255</span>
+              </div>
+            </div>
+          </div>
+          // Ataque (Solo Sustain)
+          <div class="hz-inputs" style="margin-top:0;" id="tine-atk-container-${i}">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; color: #888;">Ataque (ms)</label>
+              <div style="display: flex;">
+                <input type="range" id="tine-atk-${i}" min="0" max="1000" value="10" step="10" style="margin:0; flex:1;">
+                <span id="tine-atk-lbl-${i}" style="width:40px; text-align:right; font-size:12px;">10ms</span>
+              </div>
+            </div>
+          </div>
+          // Duración (Solo Sustain)
+          <div class="hz-inputs" style="margin-top:0;" id="tine-dur-container-${i}">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; color: #888;">Duración (ms)</label>
+              <div style="display: flex;">
+                <input type="range" id="tine-dur-${i}" min="100" max="3000" value="1500" step="100" style="margin:0; flex:1;">
+                <span id="tine-dur-lbl-${i}" style="width:40px; text-align:right; font-size:12px;">1500ms</span>
+              </div>
+            </div>
           </div>
         `;
         grid.appendChild(div);
@@ -695,39 +731,62 @@
           if (v > 2000) v = 2000;
           num.value = v; slider.value = v;
         };
+
+        const velSlider = document.getElementById(`tine-vel-${i}`);
+        velSlider.oninput = () => { document.getElementById(`tine-vel-lbl-${i}`).textContent = velSlider.value; };
+
+        const atkSlider = document.getElementById(`tine-atk-${i}`);
+        atkSlider.oninput = () => { document.getElementById(`tine-atk-lbl-${i}`).textContent = atkSlider.value + 'ms'; };
+
+        const durSlider = document.getElementById(`tine-dur-${i}`);
+        durSlider.oninput = () => {
+          const val = parseInt(durSlider.value);
+          document.getElementById(`tine-dur-lbl-${i}`).textContent = val >= 3000 ? '∞' : val + 'ms';
+        };
       });
     }
 
     async function playSelectedTines() {
-      if (tinesData.length === 0) return;
       abortCurrent();
       abortMelody();
       currentAbort = new AbortController();
       const signal = currentAbort.signal;
 
-      const vel_ = parseInt(document.getElementById('velocity').value);
-      let dur_ = parseInt(document.getElementById('duration').value);
-      if (dur_ >= 3000) dur_ = 0;
-      const pulse_ = Math.round(5 + (vel_ / 255) * 55);
-
-      let url = `/play_multi?mode=${mode}&vel=${vel_}`;
-      if (mode === 'sustain') url += `&dur=${dur_}`;
-      else url += `&pulse=${pulse_}`;
+      const payload = {
+        mode: mode,
+        tines: []
+      };
 
       let hasActive = false;
       for (let i = 0; i < tinesData.length; i++) {
         const enCb = document.getElementById(`tine-en-${i}`);
         if (!enCb || !enCb.checked) continue;
 
-        const slider = document.getElementById(`tine-hz-${i}`);
-        const hz = parseFloat(slider.value);
-        url += `&t${i}=${hz.toFixed(2)}`;
+        const hz = parseFloat(document.getElementById(`tine-hz-${i}`).value);
+        const vel = parseInt(document.getElementById(`tine-vel-${i}`).value);
+
+        const tineData = { index: i, hz: hz, vel: vel };
+
+        if (mode === 'sustain') {
+          tineData.attack = parseInt(document.getElementById(`tine-atk-${i}`).value);
+          let dur = parseInt(document.getElementById(`tine-dur-${i}`).value);
+          tineData.dur = dur >= 3000 ? 0 : dur;
+        } else {
+          tineData.pulse = Math.round(5 + (vel / 255) * 55);
+        }
+
+        payload.tines.push(tineData);
         hasActive = true;
       }
 
       if (!hasActive) return;
 
-      fetch(url, { method: 'POST', signal }).catch(e => {
+      fetch('/play_multi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      }).catch(e => {
         if (e.name !== 'AbortError') console.error(e);
       });
     }
@@ -747,7 +806,18 @@
       mode = m;
       document.getElementById('modePluck').classList.toggle('active', m === 'pluck');
       document.getElementById('modeSustain').classList.toggle('active', m === 'sustain');
-      document.getElementById('dur-row').style.display = m === 'sustain' ? 'flex' : 'none';
+      // Hide global duration row entirely as we moved it to individual tines
+      document.getElementById('dur-row').style.display = 'none';
+
+      // Toggle visibility of per-tine envelope controls
+      if (tinesData.length > 0) {
+        for (let i = 0; i < tinesData.length; i++) {
+          const atk = document.getElementById(`tine-atk-container-${i}`);
+          const dur = document.getElementById(`tine-dur-container-${i}`);
+          if (atk) atk.style.display = m === 'sustain' ? 'block' : 'none';
+          if (dur) dur.style.display = m === 'sustain' ? 'block' : 'none';
+        }
+      }
     }
 
     // Tines logic replaced Harmonic Buttons    // ─────────────────────────────────────────────

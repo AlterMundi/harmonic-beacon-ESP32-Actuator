@@ -175,6 +175,7 @@ public:
   bool getIsPlaying() const { return isPlaying; }
   uint8_t getPin() const { return pin; }
   uint8_t getChannel() const { return channel; }
+  uint32_t getAttackMs() const { return attackMs; }
 };
 
 #endif // TINE_DRIVER_H

@@ -231,40 +231,70 @@ static void handlePlayFreq() {
 }
 
 // POST
-// /play_multi?mode=<pluck|sustain>&vel=<0-255>&dur=<ms>&pulse=<ms>&t0=<hz>&t1=<hz>...
-// Plays multiple specified tines simultaneously with their individual
-// frequencies.
+// /play_multi
+// Expects a JSON payload like:
+// {
+//   "mode": "sustain",
+//   "tines": [
+//     {"index": 0, "hz": 64.0, "vel": 255, "dur": 1500, "attack": 20},
+//     {"index": 2, "hz": 320.0, "vel": 100, "pulse": 15}
+//   ]
+// }
 static void handlePlayMulti() {
-  String mode_ = server.hasArg("mode") ? server.arg("mode") : "pluck";
-  uint8_t vel = server.hasArg("vel")
-                    ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255)
-                    : 200;
-  uint32_t dur = server.hasArg("dur")
-                     ? (uint32_t)constrain(server.arg("dur").toInt(), 0, 3000)
-                     : 0;
-  uint16_t pulse =
-      server.hasArg("pulse")
-          ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
-          : 30;
+  if (!server.hasArg("plain")) {
+    server.send(400, "application/json",
+                "{\"error\":\"Missing JSON payload\"}");
+    return;
+  }
 
-  for (size_t i = 0; i < tineManager.getTineCount(); i++) {
-    String argName = "t" + String(i);
-    if (server.hasArg(argName)) {
-      float hz = server.arg(argName).toFloat();
-      TineDriver *t = tineManager.getTine(i);
-      if (t != nullptr) {
-        if (hz >= 20.0f) {
-          t->setFrequency(hz);
-        }
-        if (mode_ == "sustain") {
-          tineManager.playNote(i, vel, dur);
-        } else {
-          tineManager.pluckNote(i, pulse);
-        }
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+  if (error) {
+    server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+    return;
+  }
+
+  String mode_ = doc["mode"] | "pluck";
+  JsonArray tines = doc["tines"].as<JsonArray>();
+
+  for (JsonObject tineReq : tines) {
+    uint8_t index = tineReq["index"] | 0;
+
+    TineDriver *t = tineManager.getTine(index);
+    if (t == nullptr)
+      continue;
+
+    if (!tineReq["hz"].isNull()) {
+      float hz = tineReq["hz"].as<float>();
+      if (hz >= 20.0f) {
+        t->setFrequency(hz);
       }
     }
+
+    uint8_t vel = tineReq["vel"] | 200;
+
+    // Apply specific envelope params if provided, otherwise preserve default
+    // behavior
+    if (!tineReq["attack"].isNull() || !tineReq["dur"].isNull()) {
+      uint32_t currentAttack = t->getAttackMs();
+      if (!tineReq["attack"].isNull())
+        currentAttack = tineReq["attack"].as<uint32_t>();
+      // We pass the defaults for decay and pulse duration to avoid resetting
+      // them incorrectly here, decay is less critical and pulse is handled by
+      // pluck()/playNote() below.
+      t->setEnvelopeParams(currentAttack, 200, 500);
+    }
+
+    if (mode_ == "sustain") {
+      uint32_t dur = tineReq["dur"] | 0;
+      tineManager.playNote(index, vel, dur);
+    } else {
+      uint16_t pulse = tineReq["pulse"] | 30;
+      tineManager.pluckNote(index, pulse);
+    }
   }
-  server.send(200, "text/plain", "OK");
+
+  server.send(200, "application/json", "{\"ok\":true}");
 }
 
 // POST /melody_play?name=<string>  — ACK only; sequencing runs in JS
