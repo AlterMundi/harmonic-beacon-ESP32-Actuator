@@ -230,6 +230,43 @@ static void handlePlayFreq() {
   server.send(200, "text/plain", "OK");
 }
 
+// POST
+// /play_multi?mode=<pluck|sustain>&vel=<0-255>&dur=<ms>&pulse=<ms>&t0=<hz>&t1=<hz>...
+// Plays multiple specified tines simultaneously with their individual
+// frequencies.
+static void handlePlayMulti() {
+  String mode_ = server.hasArg("mode") ? server.arg("mode") : "pluck";
+  uint8_t vel = server.hasArg("vel")
+                    ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255)
+                    : 200;
+  uint32_t dur = server.hasArg("dur")
+                     ? (uint32_t)constrain(server.arg("dur").toInt(), 0, 3000)
+                     : 0;
+  uint16_t pulse =
+      server.hasArg("pulse")
+          ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
+          : 30;
+
+  for (size_t i = 0; i < tineManager.getTineCount(); i++) {
+    String argName = "t" + String(i);
+    if (server.hasArg(argName)) {
+      float hz = server.arg(argName).toFloat();
+      TineDriver *t = tineManager.getTine(i);
+      if (t != nullptr) {
+        if (hz >= 20.0f) {
+          t->setFrequency(hz);
+        }
+        if (mode_ == "sustain") {
+          tineManager.playNote(i, vel, dur);
+        } else {
+          tineManager.pluckNote(i, pulse);
+        }
+      }
+    }
+  }
+  server.send(200, "text/plain", "OK");
+}
+
 // POST /melody_play?name=<string>  — ACK only; sequencing runs in JS
 void handleMelodyPlay() {
   String name = server.hasArg("name") ? server.arg("name") : "unknown";
@@ -256,6 +293,7 @@ void setupEndpoints(WebServer &srv) {
   srv.on("/setduty", HTTP_POST, handleSetDuty);
   srv.on("/play_hz", HTTP_POST, handlePlayHz);
   srv.on("/play_freq", HTTP_POST, handlePlayFreq);
+  srv.on("/play_multi", HTTP_POST, handlePlayMulti);
   srv.on("/melody_play", HTTP_POST, handleMelodyPlay);
 
   // Favicon
