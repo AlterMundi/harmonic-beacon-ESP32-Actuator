@@ -424,8 +424,8 @@
     </div>
     <div id="dur-row" class="slider-row">
       <span class="slider-label">Duración</span>
-      <input type="range" id="duration" min="50" max="3000" value="500" step="50">
-      <span class="slider-val" id="durVal">500ms</span>
+      <input type="range" id="duration" min="50" max="3000" value="3000" step="50">
+      <span class="slider-val" id="durVal">∞</span>
     </div>
   </div>
 
@@ -598,7 +598,8 @@
     async function playHz(hz, options = {}) {
       const { vel, dur, pulse, signal } = options;
       const vel_ = vel ?? parseInt(document.getElementById('velocity').value);
-      const dur_ = dur ?? parseInt(document.getElementById('duration').value);
+      let dur_ = dur ?? parseInt(document.getElementById('duration').value);
+      if (dur_ >= 3000) dur_ = 0;
       const pulse_ = pulse ?? Math.round(5 + (vel_ / 255) * 55); // 5–60 ms
 
       let url;
@@ -621,7 +622,8 @@
     async function playFreq(hz, options = {}) {
       const { vel, dur, pulse, signal } = options;
       const vel_ = vel ?? parseInt(document.getElementById('velocity').value);
-      const dur_ = dur ?? parseInt(document.getElementById('duration').value);
+      let dur_ = dur ?? parseInt(document.getElementById('duration').value);
+      if (dur_ >= 3000) dur_ = 0;
       const pulse_ = pulse ?? Math.round(5 + (vel_ / 255) * 55);
 
       if (hz < 20) return; // below LEDC minimum
@@ -697,7 +699,7 @@
     };
     document.getElementById('duration').oninput = function () {
       const v = parseInt(this.value);
-      document.getElementById('durVal').textContent = v === 0 ? '∞' : v + 'ms';
+      document.getElementById('durVal').textContent = v >= 3000 ? '∞' : v + 'ms';
     };
 
     function setMode(m) {
