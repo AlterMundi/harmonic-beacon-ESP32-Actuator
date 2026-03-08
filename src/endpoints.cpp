@@ -164,6 +164,8 @@ void handlePlayHz() {
   }
   tineManager.setFundamental(hz);
 
+  uint8_t tineIdx = server.hasArg("tine") ? server.arg("tine").toInt() : 0;
+
   String mode = server.hasArg("mode") ? server.arg("mode") : "pluck";
   if (mode == "sustain") {
     uint8_t vel = server.hasArg("vel")
@@ -172,20 +174,21 @@ void handlePlayHz() {
     uint32_t dur = server.hasArg("dur")
                        ? (uint32_t)constrain(server.arg("dur").toInt(), 0, 3000)
                        : 0;
-    tineManager.playNote(0, vel, dur);
+    tineManager.playNote(tineIdx, vel, dur);
   } else {
     uint16_t pulse =
         server.hasArg("pulse")
             ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
             : 30;
-    tineManager.pluckNote(0, pulse);
+    tineManager.pluckNote(tineIdx, pulse);
   }
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
 // POST
-// /play_freq?hz=<float>&mode=<pluck|sustain>&vel=<0-255>&dur=<ms>&pulse=<ms>
-// Plays tine 0 at the given frequency WITHOUT touching the stored fundamental.
+// /play_freq?tine=<0-N>&hz=<float>&mode=<pluck|sustain>&vel=<0-255>&dur=<ms>&pulse=<ms>
+// Plays the specified tine at the given frequency WITHOUT touching the stored
+// fundamental.
 static void handlePlayFreq() {
   if (!server.hasArg("hz")) {
     server.send(400, "text/plain", "missing hz");
@@ -196,6 +199,8 @@ static void handlePlayFreq() {
     server.send(400, "text/plain", "hz must be >= 20");
     return;
   }
+
+  uint8_t tineIdx = server.hasArg("tine") ? server.arg("tine").toInt() : 0;
 
   String mode_ = server.hasArg("mode") ? server.arg("mode") : "pluck";
   uint8_t vel = server.hasArg("vel")
@@ -209,18 +214,18 @@ static void handlePlayFreq() {
           ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
           : 30;
 
-  TineDriver *t0 = tineManager.getTine(0);
-  if (t0 == nullptr) {
-    server.send(500, "text/plain", "tine 0 not available");
+  TineDriver *t = tineManager.getTine(tineIdx);
+  if (t == nullptr) {
+    server.send(500, "text/plain", "tine not available");
     return;
   }
 
-  t0->setFrequency(hz); // only changes LEDC, not fundamentalHz
+  t->setFrequency(hz); // only changes LEDC, not fundamentalHz
 
   if (mode_ == "sustain") {
-    tineManager.playNote(0, vel, dur);
+    tineManager.playNote(tineIdx, vel, dur);
   } else {
-    tineManager.pluckNote(0, pulse);
+    tineManager.pluckNote(tineIdx, pulse);
   }
   server.send(200, "text/plain", "OK");
 }

@@ -391,22 +391,16 @@
     border:none; border-radius:10px; cursor:pointer; letter-spacing:0.05em;
   ">⏹ STOP</button>
 
-  <!-- Afinación base -->
+  <!-- Tines Físicos -->
   <div class="card">
-    <div class="card-title">Afinación base</div>
-    <div class="hz-display"><span id="fundVal">100.0</span> <small style="font-size:0.4em;color:var(--muted)">Hz</small>
+    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+      Tines (Independientes)
+      <button onclick="playSelectedTines()"
+        style="background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 16px; font-weight:bold; cursor:pointer; font-size:1em;">▶
+        PLAY</button>
     </div>
-    <div class="hz-inputs">
-      <input type="range" id="fundSlider" min="20" max="500" value="100" step="0.5">
-      <input type="number" id="fundNumber" class="hz-number" min="20" max="500" value="100" step="1">
-    </div>
-  </div>
-
-  <!-- Armónicos -->
-  <div class="card">
-    <div class="card-title">Armónicos</div>
-    <div class="harmonic-grid" id="harmonicGrid">
-      <!-- generado por JS -->
+    <div id="tinesGrid" style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+      <div style="color:var(--muted); text-align:center;">Cargando tines...</div>
     </div>
   </div>
 
@@ -654,42 +648,88 @@
     }
 
     // ─────────────────────────────────────────────
-    // SLIDERS — Afinación
+    // CONTROL DE TINES
     // ─────────────────────────────────────────────
-    const fundSlider = document.getElementById('fundSlider');
-    const fundNumber = document.getElementById('fundNumber');
-    let fundDebounce;
+    let tinesData = [];
 
-    function setFundDisplay(hz) {
-      fundamentalHz = hz;
-      document.getElementById('fundVal').textContent = hz.toFixed(1);
-      fundSlider.value = hz;
-      if (document.activeElement !== fundNumber) {
-        fundNumber.value = hz.toFixed(1);
+    function buildTinesGrid(tinesList) {
+      if (!tinesList || tinesList.length === 0) return;
+      const grid = document.getElementById('tinesGrid');
+
+      // Only build once, then we just retain the user's slider values
+      if (tinesData.length > 0) return;
+      tinesData = tinesList;
+      grid.innerHTML = '';
+
+      tinesList.forEach((t, i) => {
+        const div = document.createElement('div');
+        div.style.background = '#222';
+        div.style.padding = '12px';
+        div.style.borderRadius = '8px';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.gap = '8px';
+
+        div.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>${t.name} (Tine ${i})</strong>
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+              <input type="checkbox" id="tine-en-${i}" checked style="width:18px; height:18px; accent-color:var(--accent);">
+              Activo
+            </label>
+          </div>
+          <div class="hz-inputs" style="margin-top:0;">
+            <input type="range" id="tine-hz-${i}" min="20" max="2000" value="${t.freq.toFixed(1)}" step="0.5" style="margin:0; flex:1;">
+            <input type="number" id="tine-num-${i}" class="hz-number" min="20" max="2000" value="${t.freq.toFixed(1)}" step="1" style="width:70px; margin-left:10px;">
+          </div>
+        `;
+        grid.appendChild(div);
+
+        const slider = document.getElementById(`tine-hz-${i}`);
+        const num = document.getElementById(`tine-num-${i}`);
+
+        slider.oninput = () => { num.value = slider.value; };
+        num.onchange = () => {
+          let v = parseFloat(num.value);
+          if (isNaN(v) || v < 20) v = 20;
+          if (v > 2000) v = 2000;
+          num.value = v; slider.value = v;
+        };
+      });
+    }
+
+    async function playSelectedTines() {
+      if (tinesData.length === 0) return;
+      abortCurrent();
+      abortMelody();
+      currentAbort = new AbortController();
+      const signal = currentAbort.signal;
+
+      const vel_ = parseInt(document.getElementById('velocity').value);
+      let dur_ = parseInt(document.getElementById('duration').value);
+      if (dur_ >= 3000) dur_ = 0;
+      const pulse_ = Math.round(5 + (vel_ / 255) * 55);
+
+      for (let i = 0; i < tinesData.length; i++) {
+        const enCb = document.getElementById(`tine-en-${i}`);
+        if (!enCb || !enCb.checked) continue;
+
+        const slider = document.getElementById(`tine-hz-${i}`);
+        const hz = parseFloat(slider.value);
+
+        let url;
+        if (mode === 'sustain') {
+          url = '/play_freq?tine=' + i + '&hz=' + hz.toFixed(2) + '&mode=sustain&vel=' + vel_ + '&dur=' + dur_;
+        } else {
+          url = '/play_freq?tine=' + i + '&hz=' + hz.toFixed(2) + '&mode=pluck&pulse=' + pulse_;
+        }
+
+        // Fire and forget (parallel fetch)
+        fetch(url, { method: 'POST', signal }).catch(e => {
+          if (e.name !== 'AbortError') console.error(e);
+        });
       }
-      updateHarmonicButtons();
     }
-
-    function sendFundamental(hz) {
-      clearTimeout(fundDebounce);
-      fundDebounce = setTimeout(() => {
-        fetch('/setfundamental?hz=' + hz, { method: 'POST' });
-      }, 200);
-    }
-
-    fundSlider.oninput = () => {
-      const hz = parseFloat(fundSlider.value);
-      setFundDisplay(hz);
-      sendFundamental(hz);
-    };
-
-    fundNumber.onchange = () => {
-      let hz = parseFloat(fundNumber.value);
-      if (isNaN(hz) || hz < 20) hz = 20;
-      if (hz > 2000) hz = 2000;
-      setFundDisplay(hz);
-      sendFundamental(hz);
-    };
 
     // ─────────────────────────────────────────────
     // SLIDERS — Modo
@@ -709,48 +749,7 @@
       document.getElementById('dur-row').style.display = m === 'sustain' ? 'flex' : 'none';
     }
 
-    // ─────────────────────────────────────────────
-    // BOTONES ARMÓNICOS
-    // ─────────────────────────────────────────────
-    const MULTIPLIERS = [1, 2, 3, 4, 5, 6];
-
-    function buildHarmonicButtons() {
-      const grid = document.getElementById('harmonicGrid');
-      grid.innerHTML = '';
-      MULTIPLIERS.forEach(m => {
-        const btn = document.createElement('button');
-        btn.className = 'harm-btn';
-        btn.id = 'harm-' + m;
-        const freq = fundamentalHz * m;
-        const over2k = freq > 2000;
-        btn.disabled = over2k;
-        btn.innerHTML = `<strong>×${m}</strong><small>${freq.toFixed(0)} Hz</small>`;
-        btn.addEventListener('pointerdown', async e => {
-          if (btn.disabled) return;
-          e.preventDefault();
-          abortCurrent();
-          abortMelody();
-          currentAbort = new AbortController();
-          btn.classList.add('active');
-          await playFreq(fundamentalHz * m, { signal: currentAbort.signal });
-          btn.classList.remove('active');
-        });
-        grid.appendChild(btn);
-      });
-    }
-
-    function updateHarmonicButtons() {
-      MULTIPLIERS.forEach(m => {
-        const btn = document.getElementById('harm-' + m);
-        if (!btn) return;
-        const freq = fundamentalHz * m;
-        const over2k = freq > 2000;
-        btn.disabled = over2k;
-        btn.querySelector('small').textContent = freq.toFixed(0) + ' Hz';
-      });
-    }
-
-    // ─────────────────────────────────────────────
+    // Tines logic replaced Harmonic Buttons    // ─────────────────────────────────────────────
     // MELODÍAS
     // ─────────────────────────────────────────────
     let activeMelodyId = null;
@@ -855,8 +854,8 @@
       fetch('/status')
         .then(r => r.json())
         .then(data => {
-          if (data.fundamental_hz && !melodyPlaying) {
-            setFundDisplay(data.fundamental_hz);
+          if (data.tines && data.tines.length > 0) {
+            buildTinesGrid(data.tines);
           }
         })
         .catch(() => { });
@@ -865,13 +864,12 @@
     // ─────────────────────────────────────────────
     // INIT
     // ─────────────────────────────────────────────
-    buildHarmonicButtons();
     buildMelodyList();
 
     fetch('/status')
       .then(r => r.json())
       .then(data => {
-        if (data.fundamental_hz) setFundDisplay(data.fundamental_hz);
+        if (data.tines && data.tines.length > 0) buildTinesGrid(data.tines);
       })
       .catch(() => { });
 
