@@ -25,11 +25,21 @@ private:
   bool isPlucking;
   uint16_t currentPulseMs;
 
+  // Sweep states
+  bool isSweeping;
+  float sweepStartFreq;
+  float sweepEndFreq;
+  unsigned long sweepStartTime;
+  uint32_t sweepDurationMs;
+  float lastQuantizedFreq;
+
 public:
   TineDriver(uint8_t _pin, uint8_t _channel, String _name, uint8_t _harmonic)
       : pin(_pin), channel(_channel), name(_name), harmonic(_harmonic),
         frequency(0), dutyCycle(128), currentTargetDuty(128), isPlaying(false),
         isEnvelopeActive(false), isPlucking(false), currentPulseMs(0),
+        isSweeping(false), sweepStartFreq(0), sweepEndFreq(0),
+        sweepStartTime(0), sweepDurationMs(0), lastQuantizedFreq(0),
         attackMs(10), decayMs(200), pulseDurationMs(500), isInitialized(false) {
   } // Initialize new member
 
@@ -97,8 +107,8 @@ public:
                 name.c_str(), frequency, currentTargetDuty, durationMs);
   }
 
-  void pluck(uint16_t pulseMs = 3) {
-    currentTargetDuty = dutyCycle; // Plucks use full configured duty
+  void pluck(uint16_t pulseMs = 3, uint8_t velocity = 255) {
+    currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
     // Only update tone if frequency is valid and not already playing the same
     // frequency
     if (frequency >= 20) {
@@ -121,7 +131,30 @@ public:
     isPlaying = false;
     isEnvelopeActive = false;
     isPlucking = false;
+    isSweeping = false;
     DBG_VERBOSE("[TineDriver] %s stopped\n", name.c_str());
+  }
+
+  void startSweep(float startHz, float endHz, uint32_t durationMs) {
+    if (!isInitialized || durationMs == 0)
+      return;
+
+    sweepStartFreq = startHz;
+    sweepEndFreq = endHz;
+    sweepDurationMs = durationMs;
+    sweepStartTime = millis();
+    isSweeping = true;
+    lastQuantizedFreq = -1.0f; // Force first update
+
+    // Ensure we are playing with target duty
+    currentTargetDuty = dutyCycle;
+    ledcWrite(channel, currentTargetDuty);
+    isPlaying = true;
+    isPlucking = false;
+    isEnvelopeActive = false;
+
+    DBG_VERBOSE("[TineDriver] %s Sweep Start: %.2fHz -> %.2fHz over %dms\n",
+                name.c_str(), startHz, endHz, durationMs);
   }
 
   void update() {
@@ -129,6 +162,33 @@ public:
       return;
 
     unsigned long now = millis();
+
+    // Handle Sweep Logic First
+    if (isSweeping) {
+      unsigned long elapsedSweep = now - sweepStartTime;
+      if (elapsedSweep >= sweepDurationMs) {
+        // End of sweep
+        setFrequency(sweepEndFreq);
+        stop();
+        return;
+      }
+
+      // Interpolate frequency
+      float progress = (float)elapsedSweep / (float)sweepDurationMs;
+      float currentFreq =
+          sweepStartFreq + (sweepEndFreq - sweepStartFreq) * progress;
+
+      // Quantize to nearest 0.5Hz for hardware stability
+      float quantizedFreq = round(currentFreq * 2.0f) / 2.0f;
+
+      if (quantizedFreq != lastQuantizedFreq) {
+        setFrequency(quantizedFreq);
+        lastQuantizedFreq = quantizedFreq;
+      }
+      return; // Skip envelope logic while sweeping
+    }
+
+    // Envelope Logic Below
     unsigned long elapsed = now - attackStartTime;
 
     if (isPlucking) {

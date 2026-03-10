@@ -16,6 +16,8 @@
       --surface2: #2a2a2a;
       --text: #e0e0e0;
       --muted: #888;
+      --accent: #e67e22;
+      --card: #1a1a2e;
     }
 
     * {
@@ -411,7 +413,7 @@
       <button id="modePluck" class="mode-btn active" onclick="setMode('pluck')">⚡ Pluck</button>
       <button id="modeSustain" class="mode-btn" onclick="setMode('sustain')">〰 Sustain</button>
     </div>
-    <div class="slider-row">
+    <div id="global-vel-row" class="slider-row">
       <span class="slider-label">Potencia</span>
       <input type="range" id="velocity" min="1" max="255" value="150">
       <span class="slider-val" id="velVal">150</span>
@@ -423,12 +425,45 @@
     </div>
   </div>
 
-  <!-- Melodías -->
+  <!-- Sweep (Barrido) -->
   <div class="card">
-    <div class="card-title">Melodías</div>
-    <div class="melody-list" id="melodyList">
-      <!-- generado por JS -->
+    <div class="card-title">Barrido (Sweep)</div>
+    <div class="mode-row">
+      <select id="sweepPreset" onchange="applySweepPreset()"
+        style="width:100%; padding:10px; background:#1e1e1e; color:#eee; border:1px solid #333; border-radius:8px; font-size:1em; margin-bottom:15px;">
+        <option value="unison">Unísono (Todos iguales)</option>
+        <option value="harmonic">Serie Armónica (x1, x2, x3...)</option>
+        <option value="octaves">Octavas (x1, x2, x4...)</option>
+        <option value="detuned">Desafinado (+0, +2Hz, -2Hz)</option>
+      </select>
     </div>
+    <div class="slider-row">
+      <span class="slider-label">Frec. Base Inicial</span>
+      <input type="number" id="sweepStart" value="5" min="5" max="4000"
+        style="width:80px; background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;"
+        onchange="applySweepPreset()">
+      <span class="slider-val">Hz</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Frec. Base Final</span>
+      <input type="number" id="sweepEnd" value="4000" min="5" max="4000"
+        style="width:80px; background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;"
+        onchange="applySweepPreset()">
+      <span class="slider-val">Hz</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Tiempo (1-60s)</span>
+      <input type="range" id="sweepTime" min="1" max="60" value="10"
+        oninput="document.getElementById('sweepTimeVal').innerText = this.value + 's'">
+      <span class="slider-val" id="sweepTimeVal">10s</span>
+    </div>
+    <div id="sweepPreview"
+      style="margin-top:15px; background:#111; padding:10px; border-radius:6px; font-size:0.8em; color:#888; white-space:pre-wrap; font-family:monospace;">
+    </div>
+
+    <button id="btnSweep" onclick="startSweep()"
+      style="margin-top:15px; width:100%; padding:14px; background:#e67e22; color:#fff; font-size:1.2em; font-weight:bold; border:none; border-radius:8px; cursor:pointer; letter-spacing:0.05em; text-transform:uppercase;">🚀
+      INICIAR BARRIDO</button>
   </div>
 
   <div id="status">Listo</div>
@@ -446,18 +481,20 @@
     // COMMAND QUEUE con AbortController
     // ─────────────────────────────────────────────
     let currentAbort = null;
-    let melodyPlaying = false;
-    let melodyAbort = null;
+    let sweepPlaying = false;
 
     function abortCurrent() {
       if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     }
 
-    function abortMelody() {
-      melodyPlaying = false;
-      if (melodyAbort) { melodyAbort.abort(); melodyAbort = null; }
+    function abortSweep() {
+      sweepPlaying = false;
+      const btn = document.getElementById('btnSweep');
+      if (btn) {
+        btn.textContent = '🚀 INICIAR BARRIDO';
+        btn.style.background = '#e67e22';
+      }
       fetch('/stop', { method: 'POST' }).catch(() => { });
-      updateMelodyUI(null);
     }
 
     async function abortableDelay(ms, signal) {
@@ -633,11 +670,9 @@
       });
     }
 
-    // GLOBAL STOP — cancels melody + sends /stop
+    // GLOBAL STOP — cancels sweep + sends /stop
     function globalStopAll() {
-      if (typeof melodyAbort !== 'undefined' && melodyAbort) {
-        melodyAbort.abort(); melodyAbort = null;
-      }
+      abortSweep();
       if (typeof currentAbort !== 'undefined' && currentAbort) {
         currentAbort.abort(); currentAbort = null;
       }
@@ -678,7 +713,6 @@
               Activo
             </label>
           </div>
-          // Frecuencia
           <div class="hz-inputs" style="margin-top:0;">
             <div style="flex: 1;">
               <label style="font-size: 11px; color: #888;">Frecuencia (Hz)</label>
@@ -688,7 +722,6 @@
               </div>
             </div>
           </div>
-          // Potencia (Velocidad)
           <div class="hz-inputs" style="margin-top:0;">
             <div style="flex: 1;">
               <label style="font-size: 11px; color: #888;">Potencia (0-255)</label>
@@ -698,7 +731,6 @@
               </div>
             </div>
           </div>
-          // Ataque (Solo Sustain)
           <div class="hz-inputs" style="margin-top:0;" id="tine-atk-container-${i}">
             <div style="flex: 1;">
               <label style="font-size: 11px; color: #888;">Ataque (ms)</label>
@@ -708,7 +740,6 @@
               </div>
             </div>
           </div>
-          // Duración (Solo Sustain)
           <div class="hz-inputs" style="margin-top:0;" id="tine-dur-container-${i}">
             <div style="flex: 1;">
               <label style="font-size: 11px; color: #888;">Duración (ms)</label>
@@ -744,11 +775,20 @@
           document.getElementById(`tine-dur-lbl-${i}`).textContent = val >= 3000 ? '∞' : val + 'ms';
         };
       });
+      setMode(mode);
+      updateGlobalControlsVisibility();
     }
 
     async function playSelectedTines() {
+      console.log('playSelectedTines called, tinesData.length:', tinesData.length);
+      
+      if (tinesData.length === 0) {
+        setStatus('❌ No hay tines cargados');
+        return;
+      }
+      
       abortCurrent();
-      abortMelody();
+      abortSweep();
       currentAbort = new AbortController();
       const signal = currentAbort.signal;
 
@@ -760,10 +800,19 @@
       let hasActive = false;
       for (let i = 0; i < tinesData.length; i++) {
         const enCb = document.getElementById(`tine-en-${i}`);
+        console.log(`Tine ${i}: checkbox=`, enCb ? enCb.checked : 'NOT FOUND');
         if (!enCb || !enCb.checked) continue;
 
-        const hz = parseFloat(document.getElementById(`tine-hz-${i}`).value);
-        const vel = parseInt(document.getElementById(`tine-vel-${i}`).value);
+        const hzEl = document.getElementById(`tine-hz-${i}`);
+        const velEl = document.getElementById(`tine-vel-${i}`);
+        
+        if (!hzEl || !velEl) {
+          console.error(`Tine ${i}: elements not found! hz=`, hzEl, 'vel=', velEl);
+          continue;
+        }
+        
+        const hz = parseFloat(hzEl.value);
+        const vel = parseInt(velEl.value);
 
         const tineData = { index: i, hz: hz, vel: vel };
 
@@ -777,18 +826,32 @@
 
         payload.tines.push(tineData);
         hasActive = true;
+        console.log(`Tine ${i} added to payload:`, tineData);
       }
 
-      if (!hasActive) return;
+      if (!hasActive) {
+        setStatus('⚠️ Seleccioná al menos un tine');
+        return;
+      }
 
-      fetch('/play_multi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal
-      }).catch(e => {
-        if (e.name !== 'AbortError') console.error(e);
-      });
+      console.log('Sending payload:', payload);
+      setStatus('▶ Enviando...');
+
+      try {
+        const resp = await fetch('/play_multi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal
+        });
+        console.log('Response:', resp.status);
+        setStatus('✓ Tocando ' + payload.tines.length + ' tine(s)');
+      } catch (e) {
+        console.error('Fetch error:', e);
+        if (e.name !== 'AbortError') {
+          setStatus('❌ Error: ' + e.message);
+        }
+      }
     }
 
     // ─────────────────────────────────────────────
@@ -820,92 +883,85 @@
       }
     }
 
-    // Tines logic replaced Harmonic Buttons    // ─────────────────────────────────────────────
-    // MELODÍAS
-    // ─────────────────────────────────────────────
-    let activeMelodyId = null;
-
-    function updateMelodyUI(playingId, noteIdx = null) {
-      MELODIES.forEach(m => {
-        const btn = document.getElementById('mel-play-' + m.id);
-        const prog = document.getElementById('mel-prog-' + m.id);
-        if (!btn) return;
-        if (m.id === playingId) {
-          btn.textContent = '⏸ Detener';
-          btn.classList.add('playing');
-          if (noteIdx !== null && prog)
-            prog.textContent = `Nota ${noteIdx + 1} / ${m.notes.length}`;
-        } else {
-          btn.textContent = '▶ Play';
-          btn.classList.remove('playing');
-          if (prog) prog.textContent = '';
-        }
-      });
+    function updateGlobalControlsVisibility() {
+      const hasTines = tinesData.length > 0;
+      const globalVel = document.getElementById('global-vel-row');
+      if (globalVel) {
+        globalVel.style.display = hasTines ? 'none' : 'flex';
+      }
     }
 
-    async function playMelody(melody) {
-      if (melodyPlaying && activeMelodyId === melody.id) {
-        abortMelody();
+    // ─────────────────────────────────────────────
+    // SWEEP & MATEMÁTICAS
+    // ─────────────────────────────────────────────
+    let sweepPlan = [];
+
+    function applySweepPreset() {
+      const preset = document.getElementById('sweepPreset').value;
+      const baseStart = parseFloat(document.getElementById('sweepStart').value) || 5;
+      const baseEnd = parseFloat(document.getElementById('sweepEnd').value) || 4000;
+
+      sweepPlan = [];
+      let previewText = "";
+
+      for (let i = 0; i < tinesData.length; i++) {
+        let s = baseStart;
+        let e = baseEnd;
+
+        if (preset === 'harmonic') {
+          s = baseStart * (i + 1);
+          e = baseEnd * (i + 1);
+        } else if (preset === 'octaves') {
+          s = baseStart * Math.pow(2, i);
+          e = baseEnd * Math.pow(2, i);
+        } else if (preset === 'detuned') {
+          if (i === 1) { s += 2; e += 2; }
+          if (i === 2) { s -= 2; e -= 2; }
+        }
+
+        sweepPlan.push({ index: i, start: s, end: e });
+        previewText += `Tine ${i + 1}: ${s.toFixed(1)}Hz ➝ ${e.toFixed(1)}Hz\n`;
+      }
+
+      document.getElementById('sweepPreview').innerText = previewText;
+    }
+
+    async function startSweep() {
+      if (sweepPlaying) {
+        abortSweep();
         return;
       }
       abortCurrent();
-      abortMelody();
 
-      melodyPlaying = true;
-      activeMelodyId = melody.id;
-      melodyAbort = new AbortController();
-      const signal = melodyAbort.signal;
+      sweepPlaying = true;
+      const btn = document.getElementById('btnSweep');
+      btn.textContent = '⏸ DETENER BARRIDO';
+      btn.style.background = '#c0392b';
 
-      // ACK the server (optional log)
-      fetch('/melody_play?name=' + encodeURIComponent(melody.id), { method: 'POST', signal }).catch(() => { });
+      const durSecs = parseInt(document.getElementById('sweepTime').value) || 10;
+      const durationMs = durSecs * 1000;
 
-      updateMelodyUI(melody.id, 0);
-      setStatus('🎵 ' + melody.name);
+      const payload = {
+        durationMs: durationMs,
+        tines: sweepPlan
+      };
 
       try {
-        for (let i = 0; i < melody.notes.length; i++) {
-          if (signal.aborted) break;
-          const note = melody.notes[i];
-          updateMelodyUI(melody.id, i);
+        await fetch('/sweep', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        setStatus('🚀 Barriendo (' + durSecs + 's)');
 
-          if (note.hz > 0) {
-            const vel = parseInt(document.getElementById('velocity').value);
-            const pulse = Math.round(8 + (vel / 255) * 50); // 8–58 ms
-            await fetch(`/play_hz?hz=${note.hz.toFixed(2)}&mode=pluck&pulse=${pulse}`,
-              { method: 'POST', signal });
-          } else {
-            await fetch('/stop', { method: 'POST', signal }).catch(() => { });
-          }
-
-          await abortableDelay(note.dur, signal);
-        }
+        // Auto reset UI after sweep completes
+        setTimeout(() => {
+          if (sweepPlaying) abortSweep();
+        }, durationMs + 500);
       } catch (e) {
-        if (e.name !== 'AbortError') console.error(e);
+        console.error(e);
+        abortSweep();
       }
-
-      if (!signal.aborted) {
-        fetch('/stop', { method: 'POST' }).catch(() => { });
-      }
-      melodyPlaying = false;
-      activeMelodyId = null;
-      updateMelodyUI(null);
-      setStatus('Listo');
-    }
-
-    function buildMelodyList() {
-      const list = document.getElementById('melodyList');
-      list.innerHTML = '';
-      MELODIES.forEach(mel => {
-        const item = document.createElement('div');
-        item.innerHTML = `
-          <div class="melody-item">
-            <span class="melody-name">${mel.name}</span>
-            <button id="mel-play-${mel.id}" class="mel-play-btn" onclick="playMelody(MELODIES.find(m=>m.id==='${mel.id}'))">▶ Play</button>
-          </div>
-          <div id="mel-prog-${mel.id}" class="melody-progress"></div>
-        `;
-        list.appendChild(item);
-      });
     }
 
     // ─────────────────────────────────────────────
@@ -914,7 +970,7 @@
     function setStatus(msg) {
       document.getElementById('status').textContent = msg;
       clearTimeout(statusTimer);
-      if (!melodyPlaying)
+      if (!sweepPlaying)
         statusTimer = setTimeout(() => document.getElementById('status').textContent = 'Listo', 3000);
     }
 
@@ -935,12 +991,12 @@
     // ─────────────────────────────────────────────
     // INIT
     // ─────────────────────────────────────────────
-    buildMelodyList();
 
     fetch('/status')
       .then(r => r.json())
       .then(data => {
         if (data.tines && data.tines.length > 0) buildTinesGrid(data.tines);
+        if (typeof applySweepPreset === 'function') applySweepPreset();
       })
       .catch(() => { });
 

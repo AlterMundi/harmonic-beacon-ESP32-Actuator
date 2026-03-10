@@ -120,12 +120,12 @@ public:
     tines[index]->playTone(velocity, durationMs);
   }
 
-  void pluckNote(uint8_t index, uint16_t pulseMs = 3) {
+  void pluckNote(uint8_t index, uint16_t pulseMs = 3, uint8_t velocity = 255) {
     if (index >= tines.size()) {
       DBG_ERROR("[TineManager] Invalid tine index %d\n", index);
       return;
     }
-    tines[index]->pluck(pulseMs);
+    tines[index]->pluck(pulseMs, velocity);
   }
 
   void stopAll() {

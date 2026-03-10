@@ -73,8 +73,9 @@ void handlePlay() {
 void handlePluck() {
   uint8_t tine = server.arg("tine").toInt();
   uint16_t pulse = server.hasArg("pulse") ? server.arg("pulse").toInt() : 3;
+  uint8_t vel = server.hasArg("vel") ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255) : 255;
 
-  tineManager.pluckNote(tine, pulse);
+  tineManager.pluckNote(tine, pulse, vel);
   server.send(200, "text/plain", "OK");
 }
 
@@ -167,10 +168,10 @@ void handlePlayHz() {
   uint8_t tineIdx = server.hasArg("tine") ? server.arg("tine").toInt() : 0;
 
   String mode = server.hasArg("mode") ? server.arg("mode") : "pluck";
+  uint8_t vel = server.hasArg("vel")
+                    ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255)
+                    : 200;
   if (mode == "sustain") {
-    uint8_t vel = server.hasArg("vel")
-                      ? (uint8_t)constrain(server.arg("vel").toInt(), 0, 255)
-                      : 200;
     uint32_t dur = server.hasArg("dur")
                        ? (uint32_t)constrain(server.arg("dur").toInt(), 0, 3000)
                        : 0;
@@ -180,7 +181,7 @@ void handlePlayHz() {
         server.hasArg("pulse")
             ? (uint16_t)constrain(server.arg("pulse").toInt(), 5, 200)
             : 30;
-    tineManager.pluckNote(tineIdx, pulse);
+    tineManager.pluckNote(tineIdx, pulse, vel);
   }
   server.send(200, "application/json", "{\"ok\":true}");
 }
@@ -225,7 +226,7 @@ static void handlePlayFreq() {
   if (mode_ == "sustain") {
     tineManager.playNote(tineIdx, vel, dur);
   } else {
-    tineManager.pluckNote(tineIdx, pulse);
+    tineManager.pluckNote(tineIdx, pulse, vel);
   }
   server.send(200, "text/plain", "OK");
 }
@@ -290,94 +291,138 @@ static void handlePlayMulti() {
       tineManager.playNote(index, vel, dur);
     } else {
       uint16_t pulse = tineReq["pulse"] | 30;
-      tineManager.pluckNote(index, pulse);
+      tineManager.pluckNote(index, pulse, vel);
     }
   }
-
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
-// POST /melody_play?name=<string>  — ACK only; sequencing runs in JS
-void handleMelodyPlay() {
-  String name = server.hasArg("name") ? server.arg("name") : "unknown";
-  DBG_INFO("[Melody] Playing: %s (client-side sequencer)\n", name.c_str());
-  String resp = "{\"ok\":true,\"name\":\"" + name + "\"}";
-  server.send(200, "application/json", resp);
-}
-
-void setupEndpoints(WebServer &srv) {
-  // Kalimba interface (Home)
-  srv.on("/", HTTP_GET, handleHome);
-  srv.on("/kalimba", HTTP_GET, handleHome);
-
-  srv.on("/config", HTTP_GET, handleConfig);
-  srv.on("/config", HTTP_POST, handlePostConfig);
-  srv.on("/settings", HTTP_GET, handleSettings);
-  srv.on("/play", HTTP_POST, handlePlay);
-  srv.on("/pluck", HTTP_POST, handlePluck);
-  srv.on("/stop", HTTP_POST, handleStop);
-  srv.on("/melody", HTTP_POST, handleMelody);
-  srv.on("/status", HTTP_GET, handleStatus);
-  srv.on("/restart", HTTP_POST, handleRestart);
-  srv.on("/setfundamental", HTTP_POST, handleSetFundamental);
-  srv.on("/setduty", HTTP_POST, handleSetDuty);
-  srv.on("/play_hz", HTTP_POST, handlePlayHz);
-  srv.on("/play_freq", HTTP_POST, handlePlayFreq);
-  srv.on("/play_multi", HTTP_POST, handlePlayMulti);
-  srv.on("/melody_play", HTTP_POST, handleMelodyPlay);
-
-  // Favicon
-  srv.on("/favicon.ico", HTTP_GET, []() {
-    // Redirect to SVG favicon
-    server.sendHeader("Location", "/favicon.svg");
-    server.send(301);
-  });
-
-  srv.on("/favicon.svg", HTTP_GET, []() {
-    File file = SPIFFS.open("/favicon.svg", "r");
-    if (!file) {
-      server.send(404, "text/plain", "Favicon not found");
+// POST
+// /sweep
+  // Expects JSON:
+  // {
+  //   "durationMs": 10000,
+  //   "tines": [
+  //     {"index": 0, "start": 5, "end": 400},
+  //     {"index": 1, "start": 15, "end": 1200}
+  //   ]
+  // }
+  static void handleSweep() {
+    if (!server.hasArg("plain")) {
+      server.send(400, "application/json",
+                  "{\"error\":\"Missing JSON payload\"}");
       return;
     }
-    server.streamFile(file, "image/svg+xml");
-    file.close();
-  });
 
-  // Standard 404 handler (matching proyecto-monitoreo)
-  srv.onNotFound([]() {
-    String uri = server.uri();
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (error) {
+      server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+      return;
+    }
 
-    // 1. Try to find file in SPIFFS
-    if (SPIFFS.exists(uri)) {
-      File file = SPIFFS.open(uri, "r");
-      String contentType = "text/plain";
-      if (uri.endsWith(".css"))
-        contentType = "text/css";
-      else if (uri.endsWith(".js"))
-        contentType = "application/javascript";
-      else if (uri.endsWith(".html"))
-        contentType = "text/html";
-      else if (uri.endsWith(".svg"))
-        contentType = "image/svg+xml";
-      else if (uri.endsWith(".ico"))
-        contentType = "image/x-icon";
+    uint32_t durationMs = doc["durationMs"] | 10000;
+    JsonArray tines = doc["tines"].as<JsonArray>();
 
-      server.streamFile(file, contentType);
+    for (JsonObject tineReq : tines) {
+      uint8_t index = tineReq["index"] | 0;
+
+      TineDriver *t = tineManager.getTine(index);
+      if (t == nullptr)
+        continue;
+
+      if (!tineReq["start"].isNull() && !tineReq["end"].isNull()) {
+        float startHz = tineReq["start"].as<float>();
+        float endHz = tineReq["end"].as<float>();
+        t->startSweep(startHz, endHz, durationMs);
+      }
+    }
+
+    server.send(200, "application/json", "{\"ok\":true}");
+  }
+
+  // POST /melody_play?name=<string>  — ACK only; sequencing runs in JS
+  void handleMelodyPlay() {
+    String name = server.hasArg("name") ? server.arg("name") : "unknown";
+    DBG_INFO("[Melody] Playing: %s (client-side sequencer)\n", name.c_str());
+    String resp = "{\"ok\":true,\"name\":\"" + name + "\"}";
+    server.send(200, "application/json", resp);
+  }
+
+  void setupEndpoints(WebServer & srv) {
+    // Kalimba interface (Home)
+    srv.on("/", HTTP_GET, handleHome);
+    srv.on("/kalimba", HTTP_GET, handleHome);
+
+    srv.on("/config", HTTP_GET, handleConfig);
+    srv.on("/config", HTTP_POST, handlePostConfig);
+    srv.on("/settings", HTTP_GET, handleSettings);
+    srv.on("/play", HTTP_POST, handlePlay);
+    srv.on("/pluck", HTTP_POST, handlePluck);
+    srv.on("/stop", HTTP_POST, handleStop);
+    srv.on("/sweep", HTTP_POST, handleSweep);
+    srv.on("/melody", HTTP_POST, handleMelody);
+    srv.on("/status", HTTP_GET, handleStatus);
+    srv.on("/restart", HTTP_POST, handleRestart);
+    srv.on("/setfundamental", HTTP_POST, handleSetFundamental);
+    srv.on("/setduty", HTTP_POST, handleSetDuty);
+    srv.on("/play_hz", HTTP_POST, handlePlayHz);
+    srv.on("/play_freq", HTTP_POST, handlePlayFreq);
+    srv.on("/play_multi", HTTP_POST, handlePlayMulti);
+    srv.on("/melody_play", HTTP_POST, handleMelodyPlay);
+
+    // Favicon
+    srv.on("/favicon.ico", HTTP_GET, []() {
+      // Redirect to SVG favicon
+      server.sendHeader("Location", "/favicon.svg");
+      server.send(301);
+    });
+
+    srv.on("/favicon.svg", HTTP_GET, []() {
+      File file = SPIFFS.open("/favicon.svg", "r");
+      if (!file) {
+        server.send(404, "text/plain", "Favicon not found");
+        return;
+      }
+      server.streamFile(file, "image/svg+xml");
       file.close();
-      return;
-    }
+    });
 
-    // Otherwise show the navigation list
-    String ip = WiFi.softAPIP().toString();
-    String message = "Beacon Controller\n\n";
-    message += "You are connected to the Beacon AP.\n";
-    message += "Navigate to one of the following:\n\n";
-    message += "1. WiFi Setup:  http://" + ip + "/wifi-setup\n";
-    message += "2. Kalimba UI:  http://" + ip + "/kalimba\n";
-    message += "3. Config:      http://" + ip + "/config\n";
+    // Standard 404 handler (matching proyecto-monitoreo)
+    srv.onNotFound([]() {
+      String uri = server.uri();
 
-    server.send(404, "text/plain", message);
-  });
+      // 1. Try to find file in SPIFFS
+      if (SPIFFS.exists(uri)) {
+        File file = SPIFFS.open(uri, "r");
+        String contentType = "text/plain";
+        if (uri.endsWith(".css"))
+          contentType = "text/css";
+        else if (uri.endsWith(".js"))
+          contentType = "application/javascript";
+        else if (uri.endsWith(".html"))
+          contentType = "text/html";
+        else if (uri.endsWith(".svg"))
+          contentType = "image/svg+xml";
+        else if (uri.endsWith(".ico"))
+          contentType = "image/x-icon";
 
-  DBG_INFOLN("[OK] Application endpoints registered");
-}
+        server.streamFile(file, contentType);
+        file.close();
+        return;
+      }
+
+      // Otherwise show the navigation list
+      String ip = WiFi.softAPIP().toString();
+      String message = "Beacon Controller\n\n";
+      message += "You are connected to the Beacon AP.\n";
+      message += "Navigate to one of the following:\n\n";
+      message += "1. WiFi Setup:  http://" + ip + "/wifi-setup\n";
+      message += "2. Kalimba UI:  http://" + ip + "/kalimba\n";
+      message += "3. Config:      http://" + ip + "/config\n";
+
+      server.send(404, "text/plain", message);
+    });
+
+    DBG_INFOLN("[OK] Application endpoints registered");
+  }
