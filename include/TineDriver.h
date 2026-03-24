@@ -2,6 +2,7 @@
 #define TINE_DRIVER_H
 
 #include "debug.h"
+#include "driver/ledc.h"
 #include <Arduino.h>
 
 class TineDriver {
@@ -11,6 +12,7 @@ private:
   float frequency;
   uint8_t dutyCycle;
   uint8_t currentTargetDuty;
+  uint8_t _hpoint; // LEDC hpoint for phase offset (0-255 = 0-360°)
   String name;
   uint8_t harmonic;
   bool isPlaying;
@@ -33,17 +35,23 @@ private:
   uint32_t sweepDurationMs;
   float lastQuantizedFreq;
 
+  // Use IDF directly so hpoint is preserved alongside duty on every write.
+  // Arduino's ledcWrite() always passes hpoint=0 to ledc_set_duty_and_update().
+  void _writeDuty(uint8_t duty) {
+    ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, (ledc_channel_t)channel,
+                             duty, _hpoint);
+  }
+
 public:
   TineDriver(uint8_t _pin, uint8_t _channel, String _name, uint8_t _harmonic)
       : pin(_pin), channel(_channel), name(_name), harmonic(_harmonic),
-        frequency(0), dutyCycle(128), currentTargetDuty(128), isPlaying(false),
-        isEnvelopeActive(false), isPlucking(false), currentPulseMs(0),
-        isSweeping(false), sweepStartFreq(0), sweepEndFreq(0),
-        sweepStartTime(0), sweepDurationMs(0), lastQuantizedFreq(0),
-        attackMs(10), decayMs(200), pulseDurationMs(500), isInitialized(false) {
-  } // Initialize new member
+        frequency(0), dutyCycle(128), currentTargetDuty(128), _hpoint(0),
+        isPlaying(false), isEnvelopeActive(false), isPlucking(false),
+        currentPulseMs(0), isSweeping(false), sweepStartFreq(0),
+        sweepEndFreq(0), sweepStartTime(0), sweepDurationMs(0),
+        lastQuantizedFreq(0), attackMs(10), decayMs(200),
+        pulseDurationMs(500), isInitialized(false) {}
 
-  // Original init() method
   bool init() {
     isInitialized = true;
     ledcAttachPin(pin, channel);
@@ -54,12 +62,14 @@ public:
 
   void setFrequency(float freq) {
     if (frequency == freq)
-      return; // Prevent unnecessary LEDC reconfiguration
+      return;
     frequency = freq;
     if (isInitialized && frequency >= 20) {
       ledcSetup(channel, frequency, 8); // 8-bit resolution
       if (isPlaying) {
         ledcWriteTone(channel, frequency);
+        // ledcWriteTone resets hpoint to 0 internally; restore it.
+        _writeDuty(currentTargetDuty);
       }
     }
   }
@@ -67,7 +77,16 @@ public:
   void setDuty(uint8_t duty) {
     dutyCycle = duty;
     if (isPlaying) {
-      ledcWrite(channel, dutyCycle);
+      _writeDuty(dutyCycle);
+    }
+  }
+
+  // Set phase offset in degrees (0-360). Applied immediately if playing.
+  // hpoint is preserved on every subsequent ledcWrite via _writeDuty().
+  void setPhase(float degrees) {
+    _hpoint = (uint8_t)(fmod(degrees, 360.0f) / 360.0f * 255.0f);
+    if (isPlaying) {
+      _writeDuty(currentTargetDuty);
     }
   }
 
@@ -80,23 +99,19 @@ public:
   void playTone(uint8_t velocity, uint32_t durationMs = 0) {
     currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
 
-    // Auto-stop after duration if specified. 0 = infinite sustain.
     if (durationMs == 0) {
       pulseDurationMs = UINT32_MAX;
     } else {
       pulseDurationMs = durationMs;
     }
 
-    // Determine initial duty (start at 0 if Attack is configured to prevent
-    // Pops)
     uint8_t initialDuty = (attackMs > 0) ? 0 : currentTargetDuty;
 
-    // Only update tone if frequency is valid and not already playing the same
-    // frequency
     if (frequency >= 20) {
       ledcWriteTone(channel, frequency);
+      // ledcWriteTone resets hpoint to 0; restore via _writeDuty.
     }
-    ledcWrite(channel, initialDuty);
+    _writeDuty(initialDuty);
     isPlaying = true;
     isPlucking = false;
 
@@ -109,25 +124,24 @@ public:
 
   void pluck(uint16_t pulseMs = 3, uint8_t velocity = 255) {
     currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
-    // Only update tone if frequency is valid and not already playing the same
-    // frequency
     if (frequency >= 20) {
       ledcWriteTone(channel, frequency);
+      // ledcWriteTone resets hpoint; restore via _writeDuty.
     }
-    ledcWrite(channel, currentTargetDuty);
+    _writeDuty(currentTargetDuty);
 
     isPlaying = true;
     isPlucking = true;
     isEnvelopeActive = false;
     currentPulseMs = pulseMs;
-    attackStartTime = millis(); // Reuse for tracking when pluck started
+    attackStartTime = millis();
 
     DBG_VERBOSE("[TineDriver] %s plucked: %.2f Hz, %d ms\n", name.c_str(),
                 frequency, pulseMs);
   }
 
   void stop() {
-    ledcWrite(channel, 0);
+    ledcWrite(channel, 0); // hpoint irrelevant when duty=0
     isPlaying = false;
     isEnvelopeActive = false;
     isPlucking = false;
@@ -144,11 +158,10 @@ public:
     sweepDurationMs = durationMs;
     sweepStartTime = millis();
     isSweeping = true;
-    lastQuantizedFreq = -1.0f; // Force first update
+    lastQuantizedFreq = -1.0f;
 
-    // Ensure we are playing with target duty
     currentTargetDuty = dutyCycle;
-    ledcWrite(channel, currentTargetDuty);
+    _writeDuty(currentTargetDuty);
     isPlaying = true;
     isPlucking = false;
     isEnvelopeActive = false;
@@ -163,32 +176,26 @@ public:
 
     unsigned long now = millis();
 
-    // Handle Sweep Logic First
     if (isSweeping) {
       unsigned long elapsedSweep = now - sweepStartTime;
       if (elapsedSweep >= sweepDurationMs) {
-        // End of sweep
         setFrequency(sweepEndFreq);
         stop();
         return;
       }
 
-      // Interpolate frequency
       float progress = (float)elapsedSweep / (float)sweepDurationMs;
       float currentFreq =
           sweepStartFreq + (sweepEndFreq - sweepStartFreq) * progress;
-
-      // Quantize to nearest 0.5Hz for hardware stability
       float quantizedFreq = round(currentFreq * 2.0f) / 2.0f;
 
       if (quantizedFreq != lastQuantizedFreq) {
         setFrequency(quantizedFreq);
         lastQuantizedFreq = quantizedFreq;
       }
-      return; // Skip envelope logic while sweeping
+      return;
     }
 
-    // Envelope Logic Below
     unsigned long elapsed = now - attackStartTime;
 
     if (isPlucking) {
@@ -201,28 +208,20 @@ public:
     if (!isEnvelopeActive)
       return;
 
-    // Attack phase
     if (elapsed < attackMs) {
       uint8_t currentDuty = map(elapsed, 0, attackMs, 0, currentTargetDuty);
-      ledcWrite(channel, currentDuty);
-    }
-    // Infinite sustain — hold at calculated velocity duty
-    else if (pulseDurationMs == UINT32_MAX) {
-      ledcWrite(channel, currentTargetDuty);
-      isEnvelopeActive = false; // attack done, just hold
-    }
-    // Timed sustain phase
-    else if (elapsed < attackMs + pulseDurationMs) {
-      ledcWrite(channel, currentTargetDuty);
-    }
-    // Decay phase
-    else if (elapsed < attackMs + pulseDurationMs + decayMs) {
+      _writeDuty(currentDuty);
+    } else if (pulseDurationMs == UINT32_MAX) {
+      _writeDuty(currentTargetDuty);
+      isEnvelopeActive = false;
+    } else if (elapsed < attackMs + pulseDurationMs) {
+      _writeDuty(currentTargetDuty);
+    } else if (elapsed < attackMs + pulseDurationMs + decayMs) {
       unsigned long decayElapsed = elapsed - (attackMs + pulseDurationMs);
-      uint8_t currentDuty = map(decayElapsed, 0, decayMs, currentTargetDuty, 0);
-      ledcWrite(channel, currentDuty);
-    }
-    // Finished
-    else {
+      uint8_t currentDuty =
+          map(decayElapsed, 0, decayMs, currentTargetDuty, 0);
+      _writeDuty(currentDuty);
+    } else {
       stop();
     }
   }
@@ -230,6 +229,7 @@ public:
   // Getters
   float getFrequency() const { return frequency; }
   uint8_t getDuty() const { return dutyCycle; }
+  float getPhase() const { return (_hpoint / 255.0f) * 360.0f; }
   String getName() const { return name; }
   uint8_t getHarmonic() const { return harmonic; }
   bool getIsPlaying() const { return isPlaying; }

@@ -1,3 +1,4 @@
+#include "OscReceiver.h"
 #include "TineManager.h"
 #include "configFile.h"
 #include "debug.h"
@@ -16,6 +17,12 @@
 TineManager tineManager;
 WebServer server(80);
 WiFiManager wifiManager;
+OscReceiver oscReceiver(tineManager);
+
+// OSC config (populated in setup(), used for lazy init in loop())
+static uint16_t oscPort = 53280;
+static bool oscEnabled = true;
+static bool oscInitialized = false;
 
 #ifdef ENABLE_OTA
 bool otaInitialized = false;
@@ -47,6 +54,10 @@ void setup() {
   createConfigFile();
   JsonDocument config = loadConfig();
 
+  // Read OSC config for use in loop()
+  oscPort = config["osc_port"] | 53280;
+  oscEnabled = config["osc_enabled"] | true;
+
   // Initialize tines
   DBG_INFOLN("[INFO] Initializing tines...");
   tineManager.loadFromConfig(config);
@@ -74,7 +85,10 @@ void setup() {
   DBG_INFOLN("\n=== SYSTEM READY ===");
   DBG_INFOLN("  API: http://<IP>/api/status");
   DBG_INFOLN("  Web: http://<IP>/");
-  DBG_INFOLN("  WiFi: http://192.168.4.1/wifi-setup\n");
+  DBG_INFOLN("  WiFi: http://192.168.4.1/wifi-setup");
+  if (oscEnabled) {
+    DBG_INFO("  OSC: UDP port %d (starts after WiFi)\n", oscPort);
+  }
 }
 
 void loop() {
@@ -85,8 +99,15 @@ void loop() {
   handleLocalOTA();
 #endif
 
+  // Start OSC listener once WiFi is online (lazy init, runs once)
+  if (oscEnabled && !oscInitialized && wifiManager.isOnline()) {
+    oscReceiver.begin(oscPort);
+    oscInitialized = true;
+  }
+
   wifiManager.update();
   server.handleClient();
+  oscReceiver.update();
   tineManager.update();
 
   delay(1);

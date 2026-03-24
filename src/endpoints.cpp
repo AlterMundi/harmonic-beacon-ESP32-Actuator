@@ -36,6 +36,7 @@ void handleStatus() {
       obj["freq"] = t->getFrequency();
       obj["harmonic"] = t->getHarmonic();
       obj["is_playing"] = t->getIsPlaying();
+      obj["phase_deg"] = t->getPhase();
     }
   }
 
@@ -119,7 +120,7 @@ void handlePostConfig() {
 }
 
 // POST /api/play - Unified play endpoint
-// Body: {"mode":"pluck|sustain","tines":[{"index":0,"hz":64,"vel":255,"pulse":20}]}
+// Body: {"mode":"pluck|sustain","tines":[{"index":0,"hz":64,"vel":255,"pulse":20,"phase":90.0}]}
 void handlePlay() {
   if (!server.hasArg("plain")) {
     server.send(400, "application/json", "{\"error\":\"Missing body\"}");
@@ -162,6 +163,11 @@ void handlePlay() {
     } else {
       uint16_t pulse = t["pulse"] | 30;
       tineManager.pluckNote(idx, pulse, vel);
+    }
+
+    // Apply phase offset after play (setPhase re-applies hpoint via IDF)
+    if (t["phase"].is<float>()) {
+      td->setPhase(t["phase"].as<float>());
     }
   }
 
