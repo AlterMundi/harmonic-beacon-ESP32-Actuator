@@ -120,39 +120,41 @@ Edit `/data/config.json` or use the web interface.
 **Example config:**
 ```json
 {
-  "fundamental_hz": 64.0,
+  "device_name": "beacon",
+  "fundamental_hz": 64,
   "tines": [
-    {"name": "H1", "harmonic": 1, "pin": 25, "channel": 0, "duty": 128},
-    {"name": "H2", "harmonic": 2, "pin": 26, "channel": 1, "duty": 128}
+    {"name": "Tine64", "harmonic": 1, "pin": 25, "channel": 0, "duty": 128},
+    {"name": "Tine128", "harmonic": 2, "pin": 26, "channel": 2, "duty": 128},
+    {"name": "Tine192", "harmonic": 3, "pin": 27, "channel": 4, "duty": 128},
+    {"name": "Tine256", "harmonic": 4, "pin": 14, "channel": 6, "duty": 128},
+    {"name": "Tine320", "harmonic": 5, "pin": 12, "channel": 8, "duty": 128}
   ],
-  "melodies": {
-    "escala": [
-      {"tine": 0, "dur": 500, "vel": 200},
-      {"tine": 1, "dur": 500, "vel": 200}
-    ]
-  },
   "default_params": {
-    "pulse_duration_ms": 500,
     "attack_ms": 10,
-    "decay_ms": 200
-  }
+    "decay_ms": 200,
+    "pulse_duration_ms": 500
+  },
+  "osc_enabled": true,
+  "osc_port": 53280,
+  "osc_min_duty": 120,
+  "osc_max_duty": 255
 }
 ```
 
 ## HTTP API
 
+All dynamic endpoints are prefixed with `/api/`.
+
 | Endpoint | Method | Parameters | Description |
 |----------|--------|------------|-------------|
-| `/` | GET | — | Web interface |
-| `/status` | GET | — | JSON status (frequencies, playing state) |
-| `/play` | POST | `tine`, `vel`, `dur` | Play tone |
-| `/pluck` | POST | `tine`, `pulse` | Percussive pulse |
-| `/stop` | POST | — | Stop all tines |
-| `/melody` | POST | `name` | Play saved melody |
-| `/setfundamental` | POST | `hz` | Change fundamental frequency |
-| `/config` | GET | — | View configuration |
-| `/config` | POST | JSON body | Update configuration |
-| `/restart` | POST | — | Restart ESP32 |
+| `/` | GET | — | Web interface (static `index.html`) |
+| `/api/status` | GET | — | JSON status (frequencies, playing state) |
+| `/api/config` | GET | — | View configuration |
+| `/api/config` | POST | JSON body | Update configuration |
+| `/api/play` | POST | JSON body | Play one or more tones (pluck or sustain mode) |
+| `/api/stop` | POST | — | Stop all tines |
+| `/api/sweep` | POST | JSON body | Frequency sweep parameterised |
+| `/api/fundamental` | POST | `{"hz": 64}` | Change fundamental frequency |
 
 ## Circuit Diagram
 
