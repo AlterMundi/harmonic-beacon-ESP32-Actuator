@@ -1,146 +1,73 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beacon — Control Musical</title>
+  <title>Beacon</title>
   <style>
     :root {
-      --green: #00e676;
-      --blue: #03a9f4;
-      --red: #ff5252;
-      --orange: #ff9100;
+      --accent: #00e676;
       --bg: #121212;
       --surface: #1e1e1e;
       --surface2: #2a2a2a;
+      --surface3: #333;
       --text: #e0e0e0;
       --muted: #888;
-      --accent: #e67e22;
-      --card: #1a1a2e;
+      --danger: #ff5252;
+      --orange: #ff9100;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       max-width: 480px;
       margin: 0 auto;
-      padding: 14px;
+      padding: 16px;
       background: var(--bg);
       color: var(--text);
-      text-align: center;
     }
-
     h1 {
-      color: var(--green);
-      font-size: 1.4em;
-      margin-bottom: 14px;
-      letter-spacing: 2px;
+      color: var(--accent);
+      font-size: 1.5rem;
+      text-align: center;
+      margin-bottom: 16px;
     }
-
     .card {
       background: var(--surface);
-      padding: 14px 16px;
       border-radius: 12px;
-      margin-bottom: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
     }
-
     .card-title {
-      font-size: 0.72em;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
+      letter-spacing: 1px;
       color: var(--muted);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-
-    /* --- Afinación --- */
-    .hz-display {
-      font-size: 2.6em;
-      font-weight: bold;
-      color: var(--green);
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-
-    .hz-inputs {
+    .fundamental {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-top: 6px;
+      gap: 12px;
+      margin-bottom: 16px;
     }
-
-    .hz-inputs input[type=range] {
-      flex: 1;
-      accent-color: var(--green);
-    }
-
-    .hz-number {
-      width: 68px;
+    .fundamental input[type="range"] { flex: 1; }
+    .fundamental input[type="number"] {
+      width: 80px;
       background: var(--surface2);
       border: 1px solid #444;
       border-radius: 6px;
       color: var(--text);
-      font-size: 0.9em;
-      padding: 4px 6px;
+      padding: 6px;
       text-align: center;
     }
-
-    /* --- Armónicos --- */
-    .harmonic-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .harm-btn {
-      padding: 16px 4px 12px;
-      font-weight: bold;
-      font-size: 1.0em;
-      background: var(--surface2);
-      border: 2px solid var(--green);
-      color: var(--green);
-      border-radius: 10px;
-      cursor: pointer;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
-      transition: transform 0.07s, background 0.07s, color 0.07s;
-    }
-
-    .harm-btn small {
-      display: block;
-      font-size: 0.6em;
-      font-weight: normal;
-      opacity: 0.75;
-      margin-top: 4px;
-    }
-
-    .harm-btn.active,
-    .harm-btn:active {
-      background: var(--green);
-      color: var(--bg);
-      transform: scale(0.93);
-    }
-
-    .harm-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-      border-color: var(--muted);
-      color: var(--muted);
-    }
-
-    /* --- Modo --- */
-    .mode-row {
+    .mode-toggle {
       display: flex;
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
-
     .mode-btn {
       flex: 1;
       padding: 10px;
@@ -149,948 +76,276 @@
       color: var(--muted);
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.92em;
-      transition: all 0.15s;
+      font-size: 0.9rem;
     }
-
     .mode-btn.active {
-      border-color: var(--green);
-      color: var(--green);
-      background: rgba(0, 230, 118, 0.08);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0, 230, 118, 0.1);
     }
-
-    .slider-row {
+    .tine {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .tine-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .tine-name { font-weight: 600; }
+    .tine-freq {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .control-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin: 8px 0 4px;
+      margin-top: 8px;
     }
-
-    .slider-label {
-      min-width: 72px;
-      text-align: left;
-      font-size: 0.85em;
+    .control-row label {
+      font-size: 0.8rem;
       color: var(--muted);
+      min-width: 60px;
     }
-
-    .slider-val {
-      min-width: 52px;
-      text-align: right;
-      font-size: 0.85em;
+    .control-row input[type="range"] { flex: 1; }
+    .control-row .value {
+      width: 70px;
+      background: var(--surface);
+      border: 1px solid #444;
+      border-radius: 6px;
       color: var(--text);
+      padding: 4px 6px;
+      text-align: right;
+      font-size: 0.85rem;
       font-variant-numeric: tabular-nums;
     }
-
-    .slider-row input[type=range] {
-      flex: 1;
-      margin: 0;
-      accent-color: var(--green);
-    }
-
-    #dur-row {
-      display: none;
-    }
-
-    /* --- Melodías --- */
-    .melody-list {
+    .actions {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      gap: 10px;
+      margin-top: 12px;
     }
-
-    .melody-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .melody-name {
+    .btn {
       flex: 1;
-      text-align: left;
-      font-size: 0.95em;
-    }
-
-    .mel-play-btn,
-    .mel-stop-btn {
-      padding: 9px 16px;
+      padding: 12px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.9em;
-      font-weight: bold;
-      touch-action: manipulation;
-      transition: background 0.1s;
+      font-size: 0.95rem;
+      font-weight: 600;
     }
-
-    .mel-play-btn {
-      background: rgba(0, 230, 118, 0.15);
-      border: 1px solid var(--green);
-      color: var(--green);
-    }
-
-    .mel-play-btn.playing {
-      background: var(--green);
-      color: var(--bg);
-    }
-
-    .mel-stop-btn {
-      background: #3a1010;
-      border: 1px solid #5a1a1a;
-      color: var(--red);
-    }
-
-    .melody-progress {
-      font-size: 0.75em;
+    .btn-play { background: var(--accent); color: #000; }
+    .btn-stop { background: var(--danger); color: #fff; }
+    .btn-sweep { background: var(--orange); color: #000; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #555;
       color: var(--muted);
-      height: 16px;
-      text-align: left;
+      padding: 8px 12px;
+      font-size: 0.85rem;
     }
-
-    /* --- Status --- */
     #status {
-      height: 22px;
-      color: var(--green);
-      font-size: 0.88em;
-      margin: 10px 0 8px;
-    }
-
-    .wifi-link {
+      text-align: center;
       color: var(--muted);
-      text-decoration: none;
-      font-size: 0.8em;
-      border-bottom: 1px dashed #444;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      min-height: 20px;
     }
+    .sweep-controls {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #333;
+    }
+    .sweep-controls.visible { display: block; }
+    .hidden { display: none !important; }
 
-    /* Settings modal */
+    /* Settings Modal */
     #settingsModal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.85);
       z-index: 100;
       align-items: center;
       justify-content: center;
+      padding: 20px;
     }
-
-    #settingsModal.open {
-      display: flex;
-    }
-
+    #settingsModal.open { display: flex; }
     .modal-box {
-      background: var(--card);
+      background: var(--surface);
       border-radius: 14px;
       padding: 24px;
-      width: min(96vw, 420px);
+      width: 100%;
+      max-width: 420px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 8px 40px #000a;
     }
-
     .modal-box h2 {
       margin: 0 0 16px;
       font-size: 1.1em;
-      color: var(--accent);
+      color: var(--orange);
     }
-
     .modal-box h3 {
-      margin: 16px 0 8px;
-      font-size: 0.85em;
+      margin: 20px 0 10px;
+      font-size: 0.8rem;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
-
     .cfg-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       gap: 12px;
     }
-
     .cfg-row label {
-      font-size: 0.88em;
+      font-size: 0.9rem;
       color: #ccc;
       flex: 1;
     }
-
-    .cfg-row input[type=number],
-    .cfg-row input[type=text] {
-      width: 90px;
-      padding: 5px 8px;
+    .cfg-row input[type="number"],
+    .cfg-row input[type="text"] {
+      width: 100px;
+      padding: 8px;
       border-radius: 6px;
-      background: #1a1a2e;
+      background: var(--surface2);
       border: 1px solid #444;
       color: #fff;
-      font-size: 0.9em;
+      font-size: 0.9rem;
       text-align: right;
     }
-
-    .cfg-row input[type=checkbox] {
-      width: 20px;
-      height: 20px;
+    .cfg-row input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
       cursor: pointer;
+      accent-color: var(--accent);
     }
-
     .cfg-info {
-      font-size: 0.78em;
+      font-size: 0.8rem;
       color: var(--muted);
-      background: #111;
+      background: var(--surface2);
       border-radius: 6px;
-      padding: 8px 10px;
-      margin-bottom: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
     }
-
     #restartBanner {
       display: none;
       background: #7d2a00;
       color: #ffc;
       border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 0.82em;
-      margin-top: 8px;
+      padding: 10px;
+      font-size: 0.85rem;
+      margin-top: 12px;
     }
-
     .modal-actions {
       display: flex;
       gap: 10px;
-      margin-top: 18px;
+      margin-top: 20px;
     }
-
     .modal-actions button {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       border: none;
-      font-size: 0.95em;
-      font-weight: 700;
+      font-size: 0.95rem;
+      font-weight: 600;
       cursor: pointer;
     }
-
-    #saveBtn {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    #cancelBtn {
-      background: #333;
-      color: #ccc;
-    }
+    #saveBtn { background: var(--orange); color: #fff; }
+    #cancelBtn { background: var(--surface3); color: #ccc; }
   </style>
 </head>
-
 <body>
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-    <h1 style="margin:0;">🧲 BEACON</h1>
-    <button onclick="openSettings()" title="Configuración" style="
-      background:transparent; border:1px solid #444; color:#aaa;
-      border-radius:8px; padding:6px 12px; cursor:pointer; font-size:1.2em;
-    ">⚙</button>
-  </div>
-  <button id="globalStop" onclick="globalStopAll()" style="
-    width:100%; padding:14px 0; margin-bottom:12px;
-    background:#c0392b; color:#fff; font-size:1.1em; font-weight:700;
-    border:none; border-radius:10px; cursor:pointer; letter-spacing:0.05em;
-  ">⏹ STOP</button>
+  <h1>🧲 BEACON</h1>
 
-  <!-- Tines Físicos -->
   <div class="card">
-    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-      Tines (Independientes)
+    <div class="card-title">
+      Frecuencia Fundamental
+      <button class="btn-secondary" onclick="openSettings()">⚙ Config</button>
     </div>
-    <div id="tinesGrid" style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
-      <div style="color:var(--muted); text-align:center;">Cargando tines...</div>
+    <div class="fundamental">
+      <input type="range" id="fundamental" min="20" max="200" value="64" step="0.1">
+      <input type="number" id="fundamental-num" min="20" max="200" value="64" step="0.1">
+      <span>Hz</span>
     </div>
-    <button onclick="playSelectedTines()"
-      style="margin-top:15px; width:100%; padding:14px; background:var(--accent); color:#fff; font-size:1.2em; font-weight:bold; border:none; border-radius:8px; cursor:pointer; letter-spacing:0.05em; text-transform:uppercase;">▶
-      TOCAR SELECCIONADOS</button>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="pluck" onclick="setMode('pluck')">⚡ Pluck</button>
+      <button class="mode-btn" data-mode="sustain" onclick="setMode('sustain')">〰 Sustain</button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-stop" onclick="stopAll()">⏹ STOP</button>
+    </div>
   </div>
 
-  <!-- Modo -->
   <div class="card">
-    <div class="card-title">Modo</div>
-    <div class="mode-row">
-      <button id="modePluck" class="mode-btn active" onclick="setMode('pluck')">⚡ Pluck</button>
-      <button id="modeSustain" class="mode-btn" onclick="setMode('sustain')">〰 Sustain</button>
-    </div>
-    <div id="global-vel-row" class="slider-row">
-      <span class="slider-label">Potencia</span>
-      <input type="range" id="velocity" min="1" max="255" value="150">
-      <span class="slider-val" id="velVal">150</span>
-    </div>
-    <div id="dur-row" class="slider-row">
-      <span class="slider-label">Duración</span>
-      <input type="range" id="duration" min="50" max="3000" value="3000" step="50">
-      <span class="slider-val" id="durVal">∞</span>
+    <div class="card-title">Tines</div>
+    <div id="tines-container">
+      <div style="text-align:center;color:var(--muted);">Cargando...</div>
     </div>
   </div>
 
-  <!-- Sweep (Barrido) -->
   <div class="card">
     <div class="card-title">Barrido (Sweep)</div>
-    <div class="mode-row">
-      <select id="sweepPreset" onchange="applySweepPreset()"
-        style="width:100%; padding:10px; background:#1e1e1e; color:#eee; border:1px solid #333; border-radius:8px; font-size:1em; margin-bottom:15px;">
-        <option value="unison">Unísono (Todos iguales)</option>
-        <option value="harmonic">Serie Armónica (x1, x2, x3...)</option>
-        <option value="octaves">Octavas (x1, x2, x4...)</option>
-        <option value="detuned">Desafinado (+0, +2Hz, -2Hz)</option>
-      </select>
+    <div class="actions">
+      <button class="btn btn-sweep" id="sweep-btn" onclick="toggleSweep()">🚀 Iniciar Barrido</button>
     </div>
-    <div class="slider-row">
-      <span class="slider-label">Frec. Base Inicial</span>
-      <input type="number" id="sweepStart" value="5" min="5" max="4000"
-        style="width:80px; background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;"
-        onchange="applySweepPreset()">
-      <span class="slider-val">Hz</span>
+    <div class="sweep-controls" id="sweep-panel">
+      <div class="control-row">
+        <label>Inicio</label>
+        <input type="range" id="sweep-start" min="5" max="1000" value="10">
+        <span class="value" id="sweep-start-val">10 Hz</span>
+      </div>
+      <div class="control-row">
+        <label>Fin</label>
+        <input type="range" id="sweep-end" min="5" max="4000" value="1000">
+        <span class="value" id="sweep-end-val">1000 Hz</span>
+      </div>
+      <div class="control-row">
+        <label>Tiempo</label>
+        <input type="range" id="sweep-time" min="1" max="30" value="5">
+        <span class="value" id="sweep-time-val">5 s</span>
+      </div>
     </div>
-    <div class="slider-row">
-      <span class="slider-label">Frec. Base Final</span>
-      <input type="number" id="sweepEnd" value="4000" min="5" max="4000"
-        style="width:80px; background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;"
-        onchange="applySweepPreset()">
-      <span class="slider-val">Hz</span>
-    </div>
-    <div class="slider-row">
-      <span class="slider-label">Tiempo (1-60s)</span>
-      <input type="range" id="sweepTime" min="1" max="60" value="10"
-        oninput="document.getElementById('sweepTimeVal').innerText = this.value + 's'">
-      <span class="slider-val" id="sweepTimeVal">10s</span>
-    </div>
-    <div id="sweepPreview"
-      style="margin-top:15px; background:#111; padding:10px; border-radius:6px; font-size:0.8em; color:#888; white-space:pre-wrap; font-family:monospace;">
-    </div>
-
-    <button id="btnSweep" onclick="startSweep()"
-      style="margin-top:15px; width:100%; padding:14px; background:#e67e22; color:#fff; font-size:1.2em; font-weight:bold; border:none; border-radius:8px; cursor:pointer; letter-spacing:0.05em; text-transform:uppercase;">🚀
-      INICIAR BARRIDO</button>
   </div>
 
   <div id="status">Listo</div>
-  <a href="/wifi-setup" class="wifi-link">⚙️ Configurar WiFi</a>
-
-  <script>
-    // ─────────────────────────────────────────────
-    // ESTADO GLOBAL
-    // ─────────────────────────────────────────────
-    let mode = 'pluck';
-    let fundamentalHz = 100;
-    let statusTimer = null;
-
-    // ─────────────────────────────────────────────
-    // COMMAND QUEUE con AbortController
-    // ─────────────────────────────────────────────
-    let currentAbort = null;
-    let sweepPlaying = false;
-
-    function abortCurrent() {
-      if (currentAbort) { currentAbort.abort(); currentAbort = null; }
-    }
-
-    function abortSweep() {
-      sweepPlaying = false;
-      const btn = document.getElementById('btnSweep');
-      if (btn) {
-        btn.textContent = '🚀 INICIAR BARRIDO';
-        btn.style.background = '#e67e22';
-      }
-      fetch('/stop', { method: 'POST' }).catch(() => { });
-    }
-
-    async function abortableDelay(ms, signal) {
-      return new Promise((resolve, reject) => {
-        const t = setTimeout(resolve, ms);
-        signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); });
-      });
-    }
-
-    // ─────────────────────────────────────────────
-    // NOTAS FRECUENCIAS
-    // ─────────────────────────────────────────────
-    // NOTE: frequencies derived from A4=440Hz equal temperament
-    const NOTE = {
-      C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, Fs4: 369.99,
-      G4: 392.00, Gs4: 415.30, A4: 440.00, As4: 466.16, B4: 493.88,
-      C5: 523.25, Cs5: 554.37, D5: 587.33, Ds5: 622.25, E5: 659.25,
-      F5: 698.46, Fs5: 739.99, G5: 783.99, Gs5: 830.61, A5: 880.00,
-      As5: 932.33, B5: 987.77, C6: 1046.50
-    };
-
-    // ─────────────────────────────────────────────
-    // MELODÍAS PREDEFINIDAS
-    // ─────────────────────────────────────────────
-    // BPM≈140, beat=428ms, 8th=214ms, 16th=107ms, 32nd=54ms
-    const BPM = 140;
-    const B = Math.round(60000 / BPM);       // quarter note ~428ms
-    const E = Math.round(B / 2);             // eighth ~214ms
-    const S = Math.round(B / 4);             // sixteenth ~107ms
-    const DS = Math.round(B / 8);             // thirty-second ~54ms
-    const DB = Math.round(B * 1.5);           // dotted quarter ~642ms
-    const R = 0;                             // rest (hz=0 → send stop)
-
-    const MELODIES = [
-      {
-        id: 'mario3',
-        name: '🍄 Super Mario Bros 3 — Overworld',
-        notes: [
-          // Main theme, monophonic transcription
-          // Intro arpeggio
-          { hz: NOTE.E5, dur: S },
-          { hz: NOTE.E5, dur: E },
-          { hz: R, dur: DS },
-          { hz: NOTE.E5, dur: E },
-          { hz: R, dur: DS },
-          { hz: NOTE.C5, dur: E },
-          { hz: NOTE.E5, dur: E },
-          { hz: NOTE.G5, dur: B },
-          { hz: NOTE.G4, dur: B },
-
-          // Phrase A
-          { hz: NOTE.C5, dur: DB },
-          { hz: NOTE.G4, dur: E },
-          { hz: NOTE.E4, dur: DB },
-          { hz: NOTE.A4, dur: E },
-          { hz: NOTE.B4, dur: E },
-          { hz: NOTE.As4, dur: S },
-          { hz: NOTE.A4, dur: E },
-
-          // G riff
-          { hz: NOTE.G4, dur: E },
-          { hz: NOTE.E5, dur: E },
-          { hz: NOTE.G5, dur: E },
-          { hz: NOTE.A5, dur: B },
-          { hz: NOTE.F5, dur: E },
-          { hz: NOTE.G5, dur: E },
-
-          { hz: R, dur: S },
-          { hz: NOTE.E5, dur: E },
-          { hz: NOTE.C5, dur: E },
-          { hz: NOTE.D5, dur: E },
-          { hz: NOTE.B4, dur: DB },
-
-          // Phrase B (repeat variant)
-          { hz: NOTE.C5, dur: DB },
-          { hz: NOTE.G4, dur: E },
-          { hz: NOTE.E4, dur: DB },
-
-          { hz: NOTE.A4, dur: E },
-          { hz: NOTE.B4, dur: E },
-          { hz: NOTE.As4, dur: S },
-          { hz: NOTE.A4, dur: E },
-
-          { hz: NOTE.G4, dur: E },
-          { hz: NOTE.E5, dur: E },
-          { hz: NOTE.G5, dur: E },
-          { hz: NOTE.A5, dur: B },
-          { hz: NOTE.F5, dur: E },
-          { hz: NOTE.G5, dur: E },
-
-          { hz: R, dur: S },
-          { hz: NOTE.E5, dur: E },
-          { hz: NOTE.C5, dur: E },
-          { hz: NOTE.D5, dur: E },
-          { hz: NOTE.B4, dur: DB },
-
-          // Bridge
-          { hz: R, dur: E },
-          { hz: NOTE.G5, dur: S },
-          { hz: NOTE.Fs5, dur: S },
-          { hz: NOTE.F5, dur: S },
-          { hz: NOTE.Ds5, dur: E },
-          { hz: NOTE.E5, dur: S },
-          { hz: R, dur: S },
-          { hz: NOTE.Gs4, dur: S },
-          { hz: NOTE.A4, dur: S },
-          { hz: NOTE.C5, dur: S },
-          { hz: R, dur: S },
-          { hz: NOTE.A4, dur: S },
-          { hz: NOTE.C5, dur: S },
-          { hz: NOTE.D5, dur: S },
-
-          { hz: R, dur: E },
-          { hz: NOTE.Gs4, dur: S },
-          { hz: NOTE.A4, dur: S },
-          { hz: NOTE.C5, dur: E },
-          { hz: R, dur: S },
-          { hz: NOTE.F5, dur: S },
-          { hz: NOTE.E5, dur: E },
-          { hz: NOTE.Ds5, dur: S },
-
-          { hz: NOTE.D5, dur: E },
-          { hz: NOTE.C5, dur: B },
-          { hz: R, dur: E },
-        ]
-      }
-    ];
-
-    // ─────────────────────────────────────────────
-    // PLAY HZ (nota individual)
-    // ─────────────────────────────────────────────
-    async function playHz(hz, options = {}) {
-      const { vel, dur, pulse, signal } = options;
-      const vel_ = vel ?? parseInt(document.getElementById('velocity').value);
-      let dur_ = dur ?? parseInt(document.getElementById('duration').value);
-      if (dur_ >= 3000) dur_ = 0;
-      const pulse_ = pulse ?? Math.round(5 + (vel_ / 255) * 55); // 5–60 ms
-
-      let url;
-      if (hz <= 0) {
-        // rest: send stop
-        return fetch('/stop', { method: 'POST', signal }).catch(() => { });
-      }
-
-      if (mode === 'sustain') {
-        url = `/play_hz?hz=${hz.toFixed(2)}&mode=sustain&vel=${vel_}&dur=${dur_}`;
-      } else {
-        url = `/play_hz?hz=${hz.toFixed(2)}&mode=pluck&pulse=${pulse_}`;
-      }
-      return fetch(url, { method: 'POST', signal }).catch(e => {
-        if (e.name !== 'AbortError') console.error(e);
-      });
-    }
-
-    // Plays at hz WITHOUT changing the stored fundamental (for harmonic buttons)
-    async function playFreq(hz, options = {}) {
-      const { vel, dur, pulse, signal } = options;
-      const vel_ = vel ?? parseInt(document.getElementById('velocity').value);
-      let dur_ = dur ?? parseInt(document.getElementById('duration').value);
-      if (dur_ >= 3000) dur_ = 0;
-      const pulse_ = pulse ?? Math.round(5 + (vel_ / 255) * 55);
-
-      if (hz < 20) return; // below LEDC minimum
-
-      let url;
-      if (mode === 'sustain') {
-        url = `/play_freq?hz=${hz.toFixed(2)}&mode=sustain&vel=${vel_}&dur=${dur_}`;
-      } else {
-        url = `/play_freq?hz=${hz.toFixed(2)}&mode=pluck&pulse=${pulse_}`;
-      }
-      return fetch(url, { method: 'POST', signal }).catch(e => {
-        if (e.name !== 'AbortError') console.error(e);
-      });
-    }
-
-    // GLOBAL STOP — cancels sweep + sends /stop
-    function globalStopAll() {
-      abortSweep();
-      if (typeof currentAbort !== 'undefined' && currentAbort) {
-        currentAbort.abort(); currentAbort = null;
-      }
-      fetch('/stop', { method: 'POST' }).catch(() => { });
-      const btn = document.getElementById('globalStop');
-      btn.textContent = '⏹ STOPPED';
-      setTimeout(() => { btn.textContent = '⏹ STOP'; }, 800);
-    }
-
-    // ─────────────────────────────────────────────
-    // CONTROL DE TINES
-    // ─────────────────────────────────────────────
-    let tinesData = [];
-
-    function buildTinesGrid(tinesList) {
-      if (!tinesList || tinesList.length === 0) return;
-      const grid = document.getElementById('tinesGrid');
-
-      // Only build once, then we just retain the user's slider values
-      if (tinesData.length > 0) return;
-      tinesData = tinesList;
-      grid.innerHTML = '';
-
-      tinesList.forEach((t, i) => {
-        const div = document.createElement('div');
-        div.style.background = '#222';
-        div.style.padding = '12px';
-        div.style.borderRadius = '8px';
-        div.style.display = 'flex';
-        div.style.flexDirection = 'column';
-        div.style.gap = '8px';
-
-        div.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong>${t.name} (Tine ${i})</strong>
-            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-              <input type="checkbox" id="tine-en-${i}" checked style="width:18px; height:18px; accent-color:var(--accent);">
-              Activo
-            </label>
-          </div>
-          <div class="hz-inputs" style="margin-top:0;">
-            <div style="flex: 1;">
-              <label style="font-size: 11px; color: #888;">Frecuencia (Hz)</label>
-              <div style="display: flex;">
-                <input type="range" id="tine-hz-${i}" min="20" max="2000" value="${t.freq.toFixed(1)}" step="0.5" style="margin:0; flex:1;">
-                <input type="number" id="tine-num-${i}" class="hz-number" min="20" max="2000" value="${t.freq.toFixed(1)}" step="1" style="width:70px; margin-left:10px;">
-              </div>
-            </div>
-          </div>
-          <div class="hz-inputs" style="margin-top:0;">
-            <div style="flex: 1;">
-              <label style="font-size: 11px; color: #888;">Potencia (0-255)</label>
-              <div style="display: flex;">
-                <input type="range" id="tine-vel-${i}" min="0" max="255" value="255" step="1" style="margin:0; flex:1;">
-                <span id="tine-vel-lbl-${i}" style="width:40px; text-align:right; font-size:12px;">255</span>
-              </div>
-            </div>
-          </div>
-          <div class="hz-inputs" style="margin-top:0;" id="tine-atk-container-${i}">
-            <div style="flex: 1;">
-              <label style="font-size: 11px; color: #888;">Ataque (ms)</label>
-              <div style="display: flex;">
-                <input type="range" id="tine-atk-${i}" min="0" max="1000" value="10" step="10" style="margin:0; flex:1;">
-                <span id="tine-atk-lbl-${i}" style="width:40px; text-align:right; font-size:12px;">10ms</span>
-              </div>
-            </div>
-          </div>
-          <div class="hz-inputs" style="margin-top:0;" id="tine-dur-container-${i}">
-            <div style="flex: 1;">
-              <label style="font-size: 11px; color: #888;">Duración (ms)</label>
-              <div style="display: flex;">
-                <input type="range" id="tine-dur-${i}" min="100" max="3000" value="1500" step="100" style="margin:0; flex:1;">
-                <span id="tine-dur-lbl-${i}" style="width:40px; text-align:right; font-size:12px;">1500ms</span>
-              </div>
-            </div>
-          </div>
-        `;
-        grid.appendChild(div);
-
-        const slider = document.getElementById(`tine-hz-${i}`);
-        const num = document.getElementById(`tine-num-${i}`);
-
-        slider.oninput = () => { num.value = slider.value; };
-        num.onchange = () => {
-          let v = parseFloat(num.value);
-          if (isNaN(v) || v < 20) v = 20;
-          if (v > 2000) v = 2000;
-          num.value = v; slider.value = v;
-        };
-
-        const velSlider = document.getElementById(`tine-vel-${i}`);
-        velSlider.oninput = () => { document.getElementById(`tine-vel-lbl-${i}`).textContent = velSlider.value; };
-
-        const atkSlider = document.getElementById(`tine-atk-${i}`);
-        atkSlider.oninput = () => { document.getElementById(`tine-atk-lbl-${i}`).textContent = atkSlider.value + 'ms'; };
-
-        const durSlider = document.getElementById(`tine-dur-${i}`);
-        durSlider.oninput = () => {
-          const val = parseInt(durSlider.value);
-          document.getElementById(`tine-dur-lbl-${i}`).textContent = val >= 3000 ? '∞' : val + 'ms';
-        };
-      });
-      setMode(mode);
-      updateGlobalControlsVisibility();
-    }
-
-    async function playSelectedTines() {
-      console.log('playSelectedTines called, tinesData.length:', tinesData.length);
-      
-      if (tinesData.length === 0) {
-        setStatus('❌ No hay tines cargados');
-        return;
-      }
-      
-      abortCurrent();
-      abortSweep();
-      currentAbort = new AbortController();
-      const signal = currentAbort.signal;
-
-      const payload = {
-        mode: mode,
-        tines: []
-      };
-
-      let hasActive = false;
-      for (let i = 0; i < tinesData.length; i++) {
-        const enCb = document.getElementById(`tine-en-${i}`);
-        console.log(`Tine ${i}: checkbox=`, enCb ? enCb.checked : 'NOT FOUND');
-        if (!enCb || !enCb.checked) continue;
-
-        const hzEl = document.getElementById(`tine-hz-${i}`);
-        const velEl = document.getElementById(`tine-vel-${i}`);
-        
-        if (!hzEl || !velEl) {
-          console.error(`Tine ${i}: elements not found! hz=`, hzEl, 'vel=', velEl);
-          continue;
-        }
-        
-        const hz = parseFloat(hzEl.value);
-        const vel = parseInt(velEl.value);
-
-        const tineData = { index: i, hz: hz, vel: vel };
-
-        if (mode === 'sustain') {
-          tineData.attack = parseInt(document.getElementById(`tine-atk-${i}`).value);
-          let dur = parseInt(document.getElementById(`tine-dur-${i}`).value);
-          tineData.dur = dur >= 3000 ? 0 : dur;
-        } else {
-          tineData.pulse = Math.round(5 + (vel / 255) * 55);
-        }
-
-        payload.tines.push(tineData);
-        hasActive = true;
-        console.log(`Tine ${i} added to payload:`, tineData);
-      }
-
-      if (!hasActive) {
-        setStatus('⚠️ Seleccioná al menos un tine');
-        return;
-      }
-
-      console.log('Sending payload:', payload);
-      setStatus('▶ Enviando...');
-
-      try {
-        const resp = await fetch('/play_multi', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal
-        });
-        console.log('Response:', resp.status);
-        setStatus('✓ Tocando ' + payload.tines.length + ' tine(s)');
-      } catch (e) {
-        console.error('Fetch error:', e);
-        if (e.name !== 'AbortError') {
-          setStatus('❌ Error: ' + e.message);
-        }
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // SLIDERS — Modo
-    // ─────────────────────────────────────────────
-    document.getElementById('velocity').oninput = function () {
-      document.getElementById('velVal').textContent = this.value;
-    };
-    document.getElementById('duration').oninput = function () {
-      const v = parseInt(this.value);
-      document.getElementById('durVal').textContent = v >= 3000 ? '∞' : v + 'ms';
-    };
-
-    function setMode(m) {
-      mode = m;
-      document.getElementById('modePluck').classList.toggle('active', m === 'pluck');
-      document.getElementById('modeSustain').classList.toggle('active', m === 'sustain');
-      // Hide global duration row entirely as we moved it to individual tines
-      document.getElementById('dur-row').style.display = 'none';
-
-      // Toggle visibility of per-tine envelope controls
-      if (tinesData.length > 0) {
-        for (let i = 0; i < tinesData.length; i++) {
-          const atk = document.getElementById(`tine-atk-container-${i}`);
-          const dur = document.getElementById(`tine-dur-container-${i}`);
-          if (atk) atk.style.display = m === 'sustain' ? 'block' : 'none';
-          if (dur) dur.style.display = m === 'sustain' ? 'block' : 'none';
-        }
-      }
-    }
-
-    function updateGlobalControlsVisibility() {
-      const hasTines = tinesData.length > 0;
-      const globalVel = document.getElementById('global-vel-row');
-      if (globalVel) {
-        globalVel.style.display = hasTines ? 'none' : 'flex';
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // SWEEP & MATEMÁTICAS
-    // ─────────────────────────────────────────────
-    let sweepPlan = [];
-
-    function applySweepPreset() {
-      const preset = document.getElementById('sweepPreset').value;
-      const baseStart = parseFloat(document.getElementById('sweepStart').value) || 5;
-      const baseEnd = parseFloat(document.getElementById('sweepEnd').value) || 4000;
-
-      sweepPlan = [];
-      let previewText = "";
-
-      for (let i = 0; i < tinesData.length; i++) {
-        let s = baseStart;
-        let e = baseEnd;
-
-        if (preset === 'harmonic') {
-          s = baseStart * (i + 1);
-          e = baseEnd * (i + 1);
-        } else if (preset === 'octaves') {
-          s = baseStart * Math.pow(2, i);
-          e = baseEnd * Math.pow(2, i);
-        } else if (preset === 'detuned') {
-          if (i === 1) { s += 2; e += 2; }
-          if (i === 2) { s -= 2; e -= 2; }
-        }
-
-        sweepPlan.push({ index: i, start: s, end: e });
-        previewText += `Tine ${i + 1}: ${s.toFixed(1)}Hz ➝ ${e.toFixed(1)}Hz\n`;
-      }
-
-      document.getElementById('sweepPreview').innerText = previewText;
-    }
-
-    async function startSweep() {
-      if (sweepPlaying) {
-        abortSweep();
-        return;
-      }
-      abortCurrent();
-
-      sweepPlaying = true;
-      const btn = document.getElementById('btnSweep');
-      btn.textContent = '⏸ DETENER BARRIDO';
-      btn.style.background = '#c0392b';
-
-      const durSecs = parseInt(document.getElementById('sweepTime').value) || 10;
-      const durationMs = durSecs * 1000;
-
-      const payload = {
-        durationMs: durationMs,
-        tines: sweepPlan
-      };
-
-      try {
-        await fetch('/sweep', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        setStatus('🚀 Barriendo (' + durSecs + 's)');
-
-        // Auto reset UI after sweep completes
-        setTimeout(() => {
-          if (sweepPlaying) abortSweep();
-        }, durationMs + 500);
-      } catch (e) {
-        console.error(e);
-        abortSweep();
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // STATUS BAR
-    // ─────────────────────────────────────────────
-    function setStatus(msg) {
-      document.getElementById('status').textContent = msg;
-      clearTimeout(statusTimer);
-      if (!sweepPlaying)
-        statusTimer = setTimeout(() => document.getElementById('status').textContent = 'Listo', 3000);
-    }
-
-    // ─────────────────────────────────────────────
-    // POLLING /status (2 Hz)
-    // ─────────────────────────────────────────────
-    function pollStatus() {
-      fetch('/status')
-        .then(r => r.json())
-        .then(data => {
-          if (data.tines && data.tines.length > 0) {
-            buildTinesGrid(data.tines);
-          }
-        })
-        .catch(() => { });
-    }
-
-    // ─────────────────────────────────────────────
-    // INIT
-    // ─────────────────────────────────────────────
-
-    fetch('/status')
-      .then(r => r.json())
-      .then(data => {
-        if (data.tines && data.tines.length > 0) buildTinesGrid(data.tines);
-        if (typeof applySweepPreset === 'function') applySweepPreset();
-      })
-      .catch(() => { });
-
-    setInterval(pollStatus, 500);
-
-    // ─────────────────────────────────────────────
-    // SETTINGS MODAL
-    // ─────────────────────────────────────────────
-    function openSettings() {
-      fetch('/config').then(r => r.json()).then(cfg => {
-        document.getElementById('s_osc_enabled').checked = cfg.osc_enabled ?? true;
-        document.getElementById('s_osc_port').value = cfg.osc_port ?? 53280;
-        document.getElementById('s_osc_min_duty').value = cfg.osc_min_duty ?? 120;
-        document.getElementById('s_osc_max_duty').value = cfg.osc_max_duty ?? 220;
-        document.getElementById('s_attack_ms').value = cfg.default_params?.attack_ms ?? 10;
-        document.getElementById('s_decay_ms').value = cfg.default_params?.decay_ms ?? 200;
-        document.getElementById('s_pulse_ms').value = cfg.default_params?.pulse_duration_ms ?? 500;
-        document.getElementById('s_device_name').value = cfg.device_name ?? '';
-        document.getElementById('s_ssid').value = cfg.ssid ?? '';
-        document.getElementById('restartBanner').style.display = 'none';
-        document.getElementById('settingsModal').classList.add('open');
-      }).catch(() => alert('No se pudo leer la configuración'));
-    }
-
-    function closeSettings() {
-      document.getElementById('settingsModal').classList.remove('open');
-    }
-
-    async function saveSettings() {
-      const payload = {
-        osc_enabled: document.getElementById('s_osc_enabled').checked,
-        osc_port: parseInt(document.getElementById('s_osc_port').value),
-        osc_min_duty: parseInt(document.getElementById('s_osc_min_duty').value),
-        osc_max_duty: parseInt(document.getElementById('s_osc_max_duty').value),
-        default_params: {
-          attack_ms: parseInt(document.getElementById('s_attack_ms').value),
-          decay_ms: parseInt(document.getElementById('s_decay_ms').value),
-          pulse_duration_ms: parseInt(document.getElementById('s_pulse_ms').value),
-        }
-      };
-      const btn = document.getElementById('saveBtn');
-      btn.textContent = 'Guardando...';
-      try {
-        const r = await fetch('/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const res = await r.json();
-        if (res.ok) {
-          btn.textContent = '\u2713 Guardado';
-          if (res.restart_needed) {
-            document.getElementById('restartBanner').style.display = 'block';
-          } else {
-            setTimeout(closeSettings, 800);
-          }
-        } else {
-          btn.textContent = 'Error';
-        }
-      } catch (e) {
-        btn.textContent = 'Error';
-      }
-      setTimeout(() => { btn.textContent = 'Guardar'; }, 2000);
-    }
-  </script>
+  <div style="text-align:center;margin-top:12px;">
+    <a href="/wifi-setup" style="color:var(--muted);font-size:0.8rem;">⚙ Configurar WiFi</a>
+  </div>
 
   <!-- Settings Modal -->
   <div id="settingsModal">
     <div class="modal-box">
-      <h2>⚙ Configuración</h2>
-
+      <h2>⚙ Configuración Avanzada</h2>
+      
       <div class="cfg-info">
-        <span id="s_device_name"></span> — WiFi: <span id="s_ssid"></span>
+        <span id="s_device_name">beacon</span>
       </div>
 
-      <h3>OSC</h3>
+      <h3>OSC (Open Sound Control)</h3>
       <div class="cfg-row">
         <label>Habilitado</label>
         <input type="checkbox" id="s_osc_enabled">
       </div>
       <div class="cfg-row">
-        <label>Puerto (requiere reinicio)</label>
+        <label>Puerto <small>(requiere reinicio)</small></label>
         <input type="number" id="s_osc_port" min="1024" max="65535">
       </div>
       <div class="cfg-row">
-        <label>Duty mínimo (vel=0)</label>
+        <label>Duty mínimo <small>(vel=0)</small></label>
         <input type="number" id="s_osc_min_duty" min="0" max="255">
       </div>
       <div class="cfg-row">
-        <label>Duty máximo (vel=127)</label>
+        <label>Duty máximo <small>(vel=127)</small></label>
         <input type="number" id="s_osc_max_duty" min="0" max="255">
       </div>
 
-      <h3>Envolvente</h3>
+      <h3>Envolvente por defecto</h3>
       <div class="cfg-row">
         <label>Attack (ms)</label>
         <input type="number" id="s_attack_ms" min="0" max="5000">
@@ -1112,6 +367,373 @@
       </div>
     </div>
   </div>
-</body>
 
+  <script>
+    // Estado global
+    let tines = [];
+    let mode = 'pluck';
+    let sweeping = false;
+    let originalConfig = {};
+
+    // Inicialización
+    async function init() {
+      await loadStatus();
+      setupListeners();
+      setInterval(loadStatus, 1000);
+    }
+
+    // Cargar estado del servidor
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        
+        if (tines.length === 0 && data.tines) {
+          tines = data.tines;
+          renderTines();
+        }
+        
+        if (data.fundamental_hz) {
+          const fundSlider = document.getElementById('fundamental');
+          const fundNum = document.getElementById('fundamental-num');
+          if (document.activeElement !== fundSlider && document.activeElement !== fundNum) {
+            fundSlider.value = data.fundamental_hz;
+            fundNum.value = data.fundamental_hz;
+          }
+        }
+      } catch (e) {
+        setStatus('Error de conexión');
+      }
+    }
+
+    // Renderizar controles de tines
+    function renderTines() {
+      const container = document.getElementById('tines-container');
+      container.innerHTML = '';
+
+      tines.forEach((t, i) => {
+        const div = document.createElement('div');
+        div.className = 'tine';
+        div.innerHTML = `
+          <div class="tine-header">
+            <span class="tine-name">${t.name}</span>
+            <span class="tine-freq" id="freq-${i}">${t.freq.toFixed(1)} Hz</span>
+          </div>
+          <div class="control-row">
+            <label>Freq</label>
+            <input type="range" id="hz-${i}" min="20" max="2000" value="${t.freq}" step="0.1">
+            <input type="number" class="value" id="hz-val-${i}" min="20" max="2000" step="0.1" value="${t.freq.toFixed(1)}">
+          </div>
+          <div class="control-row">
+            <label>Power</label>
+            <input type="range" id="vel-${i}" min="0" max="255" value="200">
+            <input type="number" class="value" id="vel-val-${i}" min="0" max="255" value="200">
+          </div>
+          <div class="control-row sustain-only hidden">
+            <label>Ataque</label>
+            <input type="range" id="atk-${i}" min="0" max="500" value="10">
+            <input type="number" class="value" id="atk-val-${i}" min="0" max="500" value="10">
+          </div>
+          <div class="control-row sustain-only hidden">
+            <label>Duración</label>
+            <input type="range" id="dur-${i}" min="0" max="5000" value="1000" step="100">
+            <input type="number" class="value" id="dur-val-${i}" min="0" max="5000" step="100" value="1000">
+          </div>
+          <div class="actions">
+            <button class="btn btn-play" onclick="playTine(${i})">▶ Tocar</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      setupTineListeners();
+      updateModeVisibility();
+    }
+
+    // Setup listeners
+    function setupListeners() {
+      const fund = document.getElementById('fundamental');
+      const fundNum = document.getElementById('fundamental-num');
+
+      fund.oninput = () => { fundNum.value = fund.value; };
+      fund.onchange = () => updateFundamental(parseFloat(fund.value));
+      fundNum.onchange = () => {
+        let v = parseFloat(fundNum.value);
+        v = Math.max(20, Math.min(200, v));
+        fundNum.value = v;
+        fund.value = v;
+        updateFundamental(v);
+      };
+
+      // Sweep listeners
+      document.getElementById('sweep-start').oninput = (e) => {
+        document.getElementById('sweep-start-val').textContent = e.target.value + ' Hz';
+      };
+      document.getElementById('sweep-end').oninput = (e) => {
+        document.getElementById('sweep-end-val').textContent = e.target.value + ' Hz';
+      };
+      document.getElementById('sweep-time').oninput = (e) => {
+        document.getElementById('sweep-time-val').textContent = e.target.value + ' s';
+      };
+    }
+
+    function setupTineListeners() {
+      tines.forEach((t, i) => {
+        const hzSlider = document.getElementById(`hz-${i}`);
+        const velSlider = document.getElementById(`vel-${i}`);
+        const atkSlider = document.getElementById(`atk-${i}`);
+        const durSlider = document.getElementById(`dur-${i}`);
+
+        const hzNum = document.getElementById(`hz-val-${i}`);
+        const velNum = document.getElementById(`vel-val-${i}`);
+        const atkNum = document.getElementById(`atk-val-${i}`);
+        const durNum = document.getElementById(`dur-val-${i}`);
+
+        if (hzSlider && hzNum) {
+          hzSlider.oninput = () => { hzNum.value = parseFloat(hzSlider.value).toFixed(1); };
+          hzNum.onchange = () => {
+            let v = Math.max(20, Math.min(2000, parseFloat(hzNum.value) || 20));
+            hzNum.value = v.toFixed(1);
+            hzSlider.value = v;
+          };
+        }
+        if (velSlider && velNum) {
+          velSlider.oninput = () => { velNum.value = velSlider.value; };
+          velNum.onchange = () => {
+            let v = Math.max(0, Math.min(255, parseInt(velNum.value) || 0));
+            velNum.value = v;
+            velSlider.value = v;
+          };
+        }
+        if (atkSlider && atkNum) {
+          atkSlider.oninput = () => { atkNum.value = atkSlider.value; };
+          atkNum.onchange = () => {
+            let v = Math.max(0, Math.min(500, parseInt(atkNum.value) || 0));
+            atkNum.value = v;
+            atkSlider.value = v;
+          };
+        }
+        if (durSlider && durNum) {
+          durSlider.oninput = () => { durNum.value = parseInt(durSlider.value); };
+          durNum.onchange = () => {
+            let v = Math.max(0, Math.min(5000, parseInt(durNum.value) || 0));
+            durNum.value = v;
+            durSlider.value = v;
+          };
+        }
+      });
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+      updateModeVisibility();
+    }
+
+    function updateModeVisibility() {
+      document.querySelectorAll('.sustain-only').forEach(el => {
+        el.classList.toggle('hidden', mode !== 'sustain');
+      });
+    }
+
+    async function updateFundamental(hz) {
+      try {
+        await fetch('/api/fundamental', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hz })
+        });
+        setTimeout(loadStatus, 100);
+      } catch (e) {
+        setStatus('Error al actualizar fundamental');
+      }
+    }
+
+    async function playTine(index) {
+      const hz = parseFloat(document.getElementById(`hz-${index}`).value);
+      const vel = parseInt(document.getElementById(`vel-${index}`).value);
+
+      const payload = {
+        mode: mode,
+        tines: [{ index: index, hz: hz, vel: vel }]
+      };
+
+      if (mode === 'sustain') {
+        payload.tines[0].attack = parseInt(document.getElementById(`atk-${index}`).value);
+        let dur = parseInt(document.getElementById(`dur-${index}`).value);
+        payload.tines[0].dur = dur === 0 ? 0 : dur;
+      } else {
+        payload.tines[0].pulse = Math.round(5 + (vel / 255) * 55);
+      }
+
+      try {
+        await fetch('/api/play', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        setStatus(`Tocando ${tines[index].name}`);
+      } catch (e) {
+        setStatus('Error al tocar');
+      }
+    }
+
+    async function stopAll() {
+      try {
+        await fetch('/api/stop', { method: 'POST' });
+        setStatus('Detenido');
+      } catch (e) {
+        setStatus('Error al detener');
+      }
+    }
+
+    function toggleSweep() {
+      const panel = document.getElementById('sweep-panel');
+      const btn = document.getElementById('sweep-btn');
+
+      if (sweeping) {
+        stopAll();
+        sweeping = false;
+        btn.textContent = '🚀 Iniciar Barrido';
+        panel.classList.remove('visible');
+        return;
+      }
+
+      if (!panel.classList.contains('visible')) {
+        panel.classList.add('visible');
+      } else {
+        startSweep();
+      }
+    }
+
+    async function startSweep() {
+      const start = parseInt(document.getElementById('sweep-start').value);
+      const end = parseInt(document.getElementById('sweep-end').value);
+      const time = parseInt(document.getElementById('sweep-time').value);
+
+      const payload = {
+        duration_ms: time * 1000,
+        tines: tines.map((t, i) => ({
+          index: i,
+          start: start * t.harmonic,
+          end: end * t.harmonic
+        }))
+      };
+
+      try {
+        await fetch('/api/sweep', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        sweeping = true;
+        document.getElementById('sweep-btn').textContent = '⏹ Detener';
+        setStatus(`Barrido ${time}s`);
+
+        setTimeout(() => {
+          sweeping = false;
+          document.getElementById('sweep-btn').textContent = '🚀 Iniciar Barrido';
+          document.getElementById('sweep-panel').classList.remove('visible');
+        }, time * 1000 + 500);
+      } catch (e) {
+        setStatus('Error en barrido');
+      }
+    }
+
+    // ==================== SETTINGS MODAL ====================
+    
+    async function openSettings() {
+      try {
+        const res = await fetch('/api/config');
+        const cfg = await res.json();
+        originalConfig = JSON.parse(JSON.stringify(cfg)); // Deep copy
+
+        document.getElementById('s_device_name').textContent = cfg.device_name || 'beacon';
+        document.getElementById('s_osc_enabled').checked = cfg.osc_enabled ?? true;
+        document.getElementById('s_osc_port').value = cfg.osc_port ?? 53280;
+        document.getElementById('s_osc_min_duty').value = cfg.osc_min_duty ?? 120;
+        document.getElementById('s_osc_max_duty').value = cfg.osc_max_duty ?? 255;
+        document.getElementById('s_attack_ms').value = cfg.default_params?.attack_ms ?? 10;
+        document.getElementById('s_decay_ms').value = cfg.default_params?.decay_ms ?? 200;
+        document.getElementById('s_pulse_ms').value = cfg.default_params?.pulse_duration_ms ?? 500;
+        
+        document.getElementById('restartBanner').style.display = 'none';
+        document.getElementById('saveBtn').textContent = 'Guardar';
+        document.getElementById('settingsModal').classList.add('open');
+      } catch (e) {
+        setStatus('Error cargando configuración');
+      }
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    async function saveSettings() {
+      const portChanged = parseInt(document.getElementById('s_osc_port').value) !== (originalConfig.osc_port ?? 53280);
+      
+      const payload = {
+        device_name: originalConfig.device_name || 'beacon',
+        fundamental_hz: originalConfig.fundamental_hz || 64,
+        tines: originalConfig.tines || [],
+        default_params: {
+          attack_ms: parseInt(document.getElementById('s_attack_ms').value),
+          decay_ms: parseInt(document.getElementById('s_decay_ms').value),
+          pulse_duration_ms: parseInt(document.getElementById('s_pulse_ms').value)
+        },
+        osc_enabled: document.getElementById('s_osc_enabled').checked,
+        osc_port: parseInt(document.getElementById('s_osc_port').value),
+        osc_min_duty: parseInt(document.getElementById('s_osc_min_duty').value),
+        osc_max_duty: parseInt(document.getElementById('s_osc_max_duty').value)
+      };
+
+      const btn = document.getElementById('saveBtn');
+      btn.textContent = 'Guardando...';
+
+      try {
+        const r = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const res = await r.json();
+        
+        if (res.ok) {
+          btn.textContent = '✓ Guardado';
+          if (portChanged) {
+            document.getElementById('restartBanner').style.display = 'block';
+          } else {
+            setTimeout(closeSettings, 600);
+          }
+        } else {
+          btn.textContent = 'Error';
+        }
+      } catch (e) {
+        btn.textContent = 'Error';
+      }
+      
+      setTimeout(() => { btn.textContent = 'Guardar'; }, 2000);
+    }
+
+    // Cerrar modal al hacer click fuera
+    document.getElementById('settingsModal').addEventListener('click', (e) => {
+      if (e.target.id === 'settingsModal') closeSettings();
+    });
+
+    // Status message
+    let statusTimeout;
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+      clearTimeout(statusTimeout);
+      statusTimeout = setTimeout(() => {
+        document.getElementById('status').textContent = 'Listo';
+      }, 3000);
+    }
+
+    // Iniciar
+    init();
+  </script>
+</body>
 </html>
