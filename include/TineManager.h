@@ -58,7 +58,7 @@ public:
       uint8_t harmonic = tineCfg["harmonic"] | 1;
       uint8_t pin = tineCfg["pin"] | 0;
       uint8_t channel;
-      if (tineCfg.containsKey("channel")) {
+      if (tineCfg["channel"].is<uint8_t>()) {
         channel = tineCfg["channel"].as<uint8_t>();
       } else {
         channel = tines.size() * 2; // Channels 0, 2, 4 use distinct timers

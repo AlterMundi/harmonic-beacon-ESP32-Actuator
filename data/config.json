@@ -1,8 +1,6 @@
 {
-  "ssid": "",
-  "passwd": "",
-  "device_name": "beacon-01",
-  "fundamental_hz": 64.0,
+  "device_name": "beacon",
+  "fundamental_hz": 64,
   "tines": [
     {
       "name": "Tine64",
@@ -12,63 +10,38 @@
       "duty": 128
     },
     {
+      "name": "Tine128",
+      "harmonic": 2,
+      "pin": 26,
+      "channel": 2,
+      "duty": 128
+    },
+    {
       "name": "Tine192",
       "harmonic": 3,
       "pin": 27,
-      "channel": 2,
+      "channel": 4,
+      "duty": 128
+    },
+    {
+      "name": "Tine256",
+      "harmonic": 4,
+      "pin": 14,
+      "channel": 6,
       "duty": 128
     },
     {
       "name": "Tine320",
       "harmonic": 5,
       "pin": 12,
-      "channel": 4,
+      "channel": 8,
       "duty": 128
     }
   ],
-  "melodies": {
-    "escala": [
-      {
-        "tine": 0,
-        "dur": 1500,
-        "vel": 255
-      },
-      {
-        "tine": 1,
-        "dur": 1500,
-        "vel": 255
-      },
-      {
-        "tine": 2,
-        "dur": 1500,
-        "vel": 255
-      }
-    ],
-    "acorde": [
-      {
-        "tine": 0,
-        "dur": 5000,
-        "vel": 255
-      },
-      {
-        "tine": 1,
-        "dur": 5000,
-        "vel": 255,
-        "delay": 0
-      },
-      {
-        "tine": 2,
-        "dur": 5000,
-        "vel": 255,
-        "delay": 0
-      }
-    ]
-  },
   "default_params": {
-    "pulse_duration_ms": 500,
     "attack_ms": 10,
     "decay_ms": 200,
-    "burst_count": 0
+    "pulse_duration_ms": 500
   },
   "osc_enabled": true,
   "osc_port": 53280,
