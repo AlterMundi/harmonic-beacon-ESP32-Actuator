@@ -4,7 +4,7 @@
 #include "TineManager.h"
 #include "debug.h"
 #include <OSCMessage.h>
-#include <WiFiUDP.h>
+#include <WiFiUdp.h>
 
 // OSC protocol for /beacon/* messages:
 //   /beacon/play     i(tine_idx) f(vel_0_1) [i(dur_ms, 0=infinite)]
