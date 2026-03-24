@@ -8,10 +8,10 @@ ESP32-based controller for electromagnetic excitation of kalimba tines using the
 - **Natural Harmonic Series** (F×1, F×2, F×3, F×4, F×5)
 - **Adjustable Fundamental** frequency via web interface  
 - **Envelope Control** (attack/decay) for each tine
-- **Web UI** with live controls and melody playback
+- **Web UI** with live controls and frequency sweep
 - **OTA Updates** (ArduinoOTA) for wireless firmware updates
-- **Melody Sequencer** with non-blocking playback
 - **JSON Configuration** stored in SPIFFS
+- **OSC Control** (Open Sound Control) support via UDP
 
 ## Hardware Requirements
 
@@ -30,10 +30,10 @@ ESP32-based controller for electromagnetic excitation of kalimba tines using the
 | Tine | Harmonic | GPIO Pin | LEDC Channel |
 |------|----------|----------|--------------|
 | H1   | ×1       | 25       | 0            |
-| H2   | ×2       | 26       | 1            |
-| H3   | ×3       | 27       | 2            |
-| H4   | ×4       | 14       | 3            |
-| H5   | ×5       | 12       | 4            |
+| H2   | ×2       | 26       | 2            |
+| H3   | ×3       | 27       | 4            |
+| H4   | ×4       | 14       | 6            |
+| H5   | ×5       | 12       | 8            |
 
 ## Quick Start
 
@@ -105,13 +105,13 @@ sudo ufw status numbered
 
 ### Web Interface
 
-Access at `http://<ESP32_IP>/` or `http://harmbeacon.local/`
+Access at `http://<ESP32_IP>/` or `http://beacon.local/`
 
 **Features:**
 - **Fundamental slider** — adjusts base frequency (recalculates all harmonics)
-- **Tine buttons** — click to play individual tones
-- **Melody controls** — play preset sequences ("Scale", "Chord")
-- **Status display** — shows current frequencies
+- **Tine sliders** — manually override power, frequency, attack, and duration
+- **Sweep controls** — automate frequency sweeps across all tines
+- **Status display** — shows current configuration and system info
 
 ## Configuration
 
@@ -190,7 +190,7 @@ beacon/
 │   ├── configFile.cpp      # Config load/save
 │   └── otaUpdater.cpp      # ArduinoOTA
 └── lib/
-    └── WiFiManager/         # WiFi management
+    └── WiFiManager/        # WiFi management
 ```
 
 ## Memory Usage
