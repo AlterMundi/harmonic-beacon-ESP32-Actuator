@@ -37,23 +37,63 @@ ESP32-based controller for electromagnetic excitation of kalimba tines using the
 
 ## Quick Start
 
-### PlatformIO Build & Upload
+### PlatformIO Environments
+
+| Environment | Upload | Debug | Use case |
+|-------------|--------|-------|----------|
+| `usb`       | USB (esptool) | Level 2 | First flash / recovery |
+| `dev`       | OTA (espota)  | Level 2 | Development iterations |
+| `prod`      | USB (esptool) | Off     | Release builds |
+
+### Build & Upload
 
 ```bash
-cd /home/pablo/repos/beacon
-
-# Build development firmware
+# Build
 pio run -e dev
 
-# Upload via USB
-pio run -e dev --target upload
+# Upload via USB (first time or recovery)
+pio run -e usb --target upload
 
-# Upload via OTA (after first USB flash)
-pio run -e dev --target upload --upload-port beacon-01.local
+# Upload firmware via OTA
+pio run -e dev --target upload --upload-port beacon.local
+
+# Upload filesystem (SPIFFS) via OTA
+pio run -e dev --target uploadfs --upload-port beacon.local
 
 # Monitor serial output
 pio device monitor -b 115200
 ```
+
+### OTA + UFW (Firewall) Configuration
+
+ArduinoOTA requires specific ports open on the **PC** (host) firewall for the upload to succeed.
+
+#### Ports Required
+
+| Port | Protocol | Direction | Purpose |
+|------|----------|-----------|---------|
+| 3232 | TCP      | IN        | `espota.py` host port (PC ← ESP32 data channel) |
+| 5353 | UDP      | IN        | mDNS (resolves `beacon.local`) |
+
+#### UFW Commands
+
+```bash
+# Allow OTA data channel (required)
+sudo ufw allow 3232/tcp comment "PlatformIO OTA (espota)"
+
+# Allow mDNS (required for .local resolution)
+sudo ufw allow 5353/udp comment "mDNS / Avahi"
+
+# Verify rules
+sudo ufw status numbered
+```
+
+#### Troubleshooting OTA
+
+- **`No response from device`** → Verify port 3232/tcp is allowed in UFW and the ESP32 is on the same network.
+- **`.local` doesn't resolve** → Check that port 5353/udp is open and `avahi-daemon` is running (`systemctl status avahi-daemon`).
+- **OTA times out** → The ESP must have `ArduinoOTA.handle()` running in `loop()`. If the device is busy (sweep, etc.), OTA may fail — stop activity first.
+- **Recovery** → If OTA is non-functional, use the `usb` environment: `pio run -e usb --target upload`.
 
 ### Initial Setup
 
