@@ -2,7 +2,6 @@
 #define TINE_DRIVER_H
 
 #include "debug.h"
-#include "driver/ledc.h"
 #include <Arduino.h>
 
 class TineDriver {
@@ -35,11 +34,11 @@ private:
   uint32_t sweepDurationMs;
   float lastQuantizedFreq;
 
-  // Use IDF directly so hpoint is preserved alongside duty on every write.
-  // Arduino's ledcWrite() always passes hpoint=0 to ledc_set_duty_and_update().
+  // Use Arduino ledcWrite consistently — mixing Arduino API with IDF
+  // ledc_set_duty_and_update() causes the two layers to fight each other.
+  // Phase (hpoint) is not supported until that conflict is resolved.
   void _writeDuty(uint8_t duty) {
-    ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, (ledc_channel_t)channel,
-                             duty, _hpoint);
+    ledcWrite(channel, duty);
   }
 
 public:
@@ -107,10 +106,10 @@ public:
 
     uint8_t initialDuty = (attackMs > 0) ? 0 : currentTargetDuty;
 
-    // Do NOT call ledcWriteTone here — it internally calls ledcWrite(ch, 128)
-    // via the Arduino HAL, which clobbers our velocity-scaled duty.
-    // Frequency is already configured by setFrequency(). Use _writeDuty only.
-    _writeDuty(initialDuty);
+    if (frequency >= 20) {
+      ledcWriteTone(channel, frequency);  // activates PWM at target frequency
+    }
+    _writeDuty(initialDuty);  // overrides ledcWriteTone's duty=128 with our value
     isPlaying = true;
     isPlucking = false;
 
@@ -123,7 +122,9 @@ public:
 
   void pluck(uint16_t pulseMs = 3, uint8_t velocity = 255) {
     currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
-    // Same as playTone: do not call ledcWriteTone, use _writeDuty directly.
+    if (frequency >= 20) {
+      ledcWriteTone(channel, frequency);
+    }
     _writeDuty(currentTargetDuty);
 
     isPlaying = true;
