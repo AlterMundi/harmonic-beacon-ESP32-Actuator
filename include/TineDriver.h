@@ -89,6 +89,16 @@ public:
     }
   }
 
+  // Smooth velocity update for already-sustaining tines.
+  // Updates currentTargetDuty and writes it directly — no ledcWriteTone,
+  // no envelope restart, no click.
+  void updateTarget(uint8_t velocity) {
+    currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
+    if (isPlaying && !isEnvelopeActive) {
+      _writeDuty(currentTargetDuty);
+    }
+  }
+
   void setEnvelopeParams(uint16_t attack, uint16_t decay, uint16_t duration) {
     attackMs = attack;
     decayMs = decay;

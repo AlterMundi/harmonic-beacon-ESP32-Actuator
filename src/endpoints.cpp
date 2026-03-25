@@ -2,6 +2,7 @@
 #include "TineManager.h"
 #include "configFile.h"
 #include "debug.h"
+#include "version.h"
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 #include <WebServer.h>
@@ -157,9 +158,14 @@ void handlePlay() {
 
     if (strcmp(mode, "sustain") == 0) {
       uint32_t dur = t["dur"] | 0;
-      uint32_t atk = t["attack"] | 10;
-      td->setEnvelopeParams(atk, 200, dur);
-      tineManager.playNote(idx, vel, dur);
+      if (td->getIsPlaying() && dur == 0) {
+        // Tine already sustaining — update duty smoothly without restarting PWM.
+        td->updateTarget(vel);
+      } else {
+        uint32_t atk = t["attack"] | 10;
+        td->setEnvelopeParams(atk, 200, dur);
+        tineManager.playNote(idx, vel, dur);
+      }
     } else {
       uint16_t pulse = t["pulse"] | 30;
       tineManager.pluckNote(idx, pulse, vel);
@@ -241,8 +247,15 @@ void handleSetFundamental() {
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
+// GET /api/version
+void handleVersion() {
+  server.send(200, "application/json",
+              "{\"version\":\"" FIRMWARE_VERSION "\",\"features\":[\"osc\",\"phase\"]}");
+}
+
 void setupEndpoints(WebServer &srv) {
   // API endpoints
+  srv.on("/api/version", HTTP_GET, handleVersion);
   srv.on("/api/status", HTTP_GET, handleStatus);
   srv.on("/api/config", HTTP_GET, handleGetConfig);
   srv.on("/api/config", HTTP_POST, handlePostConfig);
