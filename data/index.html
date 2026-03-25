@@ -261,7 +261,7 @@
   </style>
 </head>
 <body>
-  <h1>🧲 BEACON</h1>
+  <h1>🧲 BEACON <span id="fw-version" style="font-size:0.55em;color:var(--muted);font-weight:400;"></span></h1>
 
   <div class="card">
     <div class="card-title">
@@ -379,6 +379,9 @@
 
     // Inicialización
     async function init() {
+      fetch('/api/version').then(r => r.json()).then(d => {
+        document.getElementById('fw-version').textContent = 'v' + d.version;
+      }).catch(() => {});
       await loadStatus();
       setupListeners();
       setInterval(loadStatus, 1000);
