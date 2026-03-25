@@ -107,10 +107,9 @@ public:
 
     uint8_t initialDuty = (attackMs > 0) ? 0 : currentTargetDuty;
 
-    if (frequency >= 20) {
-      ledcWriteTone(channel, frequency);
-      // ledcWriteTone resets hpoint to 0; restore via _writeDuty.
-    }
+    // Do NOT call ledcWriteTone here — it internally calls ledcWrite(ch, 128)
+    // via the Arduino HAL, which clobbers our velocity-scaled duty.
+    // Frequency is already configured by setFrequency(). Use _writeDuty only.
     _writeDuty(initialDuty);
     isPlaying = true;
     isPlucking = false;
@@ -124,10 +123,7 @@ public:
 
   void pluck(uint16_t pulseMs = 3, uint8_t velocity = 255) {
     currentTargetDuty = map(velocity, 0, 255, 0, dutyCycle);
-    if (frequency >= 20) {
-      ledcWriteTone(channel, frequency);
-      // ledcWriteTone resets hpoint; restore via _writeDuty.
-    }
+    // Same as playTone: do not call ledcWriteTone, use _writeDuty directly.
     _writeDuty(currentTargetDuty);
 
     isPlaying = true;
