@@ -11,11 +11,11 @@ static const struct {
   uint8_t pin;
   uint8_t duty;
 } DEFAULT_TINES[] = {
-  {"Tine64",  1, 25, 128},
-  {"Tine128", 2, 26, 128},
-  {"Tine192", 3, 27, 128},
-  {"Tine256", 4, 14, 128},
-  {"Tine320", 5, 12, 128}
+  {"H2-100Hz", 2, 25, 255},
+  {"H3-150Hz", 3, 26, 255},
+  {"H4-200Hz", 4, 27, 255},
+  {"H5-250Hz", 5, 14, 255},
+  {"H6-300Hz", 6, 12, 255}
 };
 
 static const size_t DEFAULT_TINE_COUNT = sizeof(DEFAULT_TINES) / sizeof(DEFAULT_TINES[0]);
@@ -35,13 +35,13 @@ void createConfigFile() {
 
   JsonDocument config;
   config["device_name"] = "beacon";
-  config["fundamental_hz"] = 64.0;
+  config["fundamental_hz"] = 50.0;
 
   // Default envelope parameters
   JsonObject params = config["default_params"].to<JsonObject>();
   params["attack_ms"] = 10;
   params["decay_ms"] = 200;
-  params["pulse_duration_ms"] = 500;
+  params["pulse_duration_ms"] = 0;
 
   // Default tines
   JsonArray tines = config["tines"].to<JsonArray>();

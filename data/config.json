@@ -1,47 +1,47 @@
 {
   "device_name": "beacon",
-  "fundamental_hz": 64,
+  "fundamental_hz": 50,
   "tines": [
     {
-      "name": "Tine64",
-      "harmonic": 1,
+      "name": "H2-100Hz",
+      "harmonic": 2,
       "pin": 25,
       "channel": 0,
-      "duty": 128
+      "duty": 255
     },
     {
-      "name": "Tine128",
-      "harmonic": 2,
+      "name": "H3-150Hz",
+      "harmonic": 3,
       "pin": 26,
       "channel": 2,
-      "duty": 128
+      "duty": 255
     },
     {
-      "name": "Tine192",
-      "harmonic": 3,
+      "name": "H4-200Hz",
+      "harmonic": 4,
       "pin": 27,
       "channel": 4,
-      "duty": 128
+      "duty": 255
     },
     {
-      "name": "Tine256",
-      "harmonic": 4,
+      "name": "H5-250Hz",
+      "harmonic": 5,
       "pin": 14,
       "channel": 6,
-      "duty": 128
+      "duty": 255
     },
     {
-      "name": "Tine320",
-      "harmonic": 5,
+      "name": "H6-300Hz",
+      "harmonic": 6,
       "pin": 12,
       "channel": 8,
-      "duty": 128
+      "duty": 255
     }
   ],
   "default_params": {
     "attack_ms": 10,
     "decay_ms": 200,
-    "pulse_duration_ms": 500
+    "pulse_duration_ms": 0
   },
   "osc_enabled": true,
   "osc_port": 53280,

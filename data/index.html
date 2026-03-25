@@ -269,15 +269,16 @@
       <button class="btn-secondary" onclick="openSettings()">⚙ Config</button>
     </div>
     <div class="fundamental">
-      <input type="range" id="fundamental" min="20" max="200" value="64" step="0.1">
-      <input type="number" id="fundamental-num" min="20" max="200" value="64" step="0.1">
+      <input type="range" id="fundamental" min="20" max="200" value="50" step="0.1">
+      <input type="number" id="fundamental-num" min="20" max="200" value="50" step="0.1">
       <span>Hz</span>
     </div>
     <div class="mode-toggle">
-      <button class="mode-btn active" data-mode="pluck" onclick="setMode('pluck')">⚡ Pluck</button>
-      <button class="mode-btn" data-mode="sustain" onclick="setMode('sustain')">〰 Sustain</button>
+      <button class="mode-btn" data-mode="pluck" onclick="setMode('pluck')">⚡ Pluck</button>
+      <button class="mode-btn active" data-mode="sustain" onclick="setMode('sustain')">〰 Sustain</button>
     </div>
     <div class="actions">
+      <button class="btn btn-play" onclick="playAll()">▶ PLAY ALL</button>
       <button class="btn btn-stop" onclick="stopAll()">⏹ STOP</button>
     </div>
   </div>
@@ -371,9 +372,10 @@
   <script>
     // Estado global
     let tines = [];
-    let mode = 'pluck';
+    let mode = 'sustain';
     let sweeping = false;
     let originalConfig = {};
+    let tineActive = {}; // per-tine playing state tracked in UI
 
     // Inicialización
     async function init() {
@@ -392,7 +394,13 @@
           tines = data.tines;
           renderTines();
         }
-        
+
+        // Sync per-tine playing state from ESP32
+        if (data.tines) {
+          data.tines.forEach(t => { tineActive[t.index] = t.is_playing; });
+          updateTineButtons();
+        }
+
         if (data.fundamental_hz) {
           const fundSlider = document.getElementById('fundamental');
           const fundNum = document.getElementById('fundamental-num');
@@ -426,8 +434,8 @@
           </div>
           <div class="control-row">
             <label>Power</label>
-            <input type="range" id="vel-${i}" min="0" max="255" value="200">
-            <input type="number" class="value" id="vel-val-${i}" min="0" max="255" value="200">
+            <input type="range" id="vel-${i}" min="0" max="255" value="255">
+            <input type="number" class="value" id="vel-val-${i}" min="0" max="255" value="255">
           </div>
           <div class="control-row sustain-only hidden">
             <label>Ataque</label>
@@ -436,11 +444,11 @@
           </div>
           <div class="control-row sustain-only hidden">
             <label>Duración</label>
-            <input type="range" id="dur-${i}" min="0" max="5000" value="1000" step="100">
-            <input type="number" class="value" id="dur-val-${i}" min="0" max="5000" step="100" value="1000">
+            <input type="range" id="dur-${i}" min="0" max="5000" value="0" step="100">
+            <input type="number" class="value" id="dur-val-${i}" min="0" max="5000" step="100" value="0">
           </div>
           <div class="actions">
-            <button class="btn btn-play" onclick="playTine(${i})">▶ Tocar</button>
+            <button class="btn btn-play" id="play-btn-${i}" onclick="toggleTine(${i})">▶ Play</button>
           </div>
         `;
         container.appendChild(div);
@@ -555,15 +563,11 @@
       const hz = parseFloat(document.getElementById(`hz-${index}`).value);
       const vel = parseInt(document.getElementById(`vel-${index}`).value);
 
-      const payload = {
-        mode: mode,
-        tines: [{ index: index, hz: hz, vel: vel }]
-      };
+      const payload = { mode: mode, tines: [{ index: index, hz: hz, vel: vel }] };
 
       if (mode === 'sustain') {
         payload.tines[0].attack = parseInt(document.getElementById(`atk-${index}`).value);
-        let dur = parseInt(document.getElementById(`dur-${index}`).value);
-        payload.tines[0].dur = dur === 0 ? 0 : dur;
+        payload.tines[0].dur = parseInt(document.getElementById(`dur-${index}`).value) || 0;
       } else {
         payload.tines[0].pulse = Math.round(5 + (vel / 255) * 55);
       }
@@ -574,15 +578,97 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        tineActive[index] = true;
+        updateTineButtons();
         setStatus(`Tocando ${tines[index].name}`);
       } catch (e) {
         setStatus('Error al tocar');
       }
     }
 
+    async function toggleTine(index) {
+      if (tineActive[index]) {
+        await stopTine(index);
+      } else {
+        await playTine(index);
+      }
+    }
+
+    // Stop one tine: stop all, re-play the remaining active ones
+    async function stopTine(index) {
+      tineActive[index] = false;
+      try {
+        await fetch('/api/stop', { method: 'POST' });
+        const still = Object.keys(tineActive).filter(i => tineActive[i]);
+        if (still.length > 0) {
+          const payload = {
+            mode: 'sustain',
+            tines: still.map(i => {
+              const idx = parseInt(i);
+              return {
+                index: idx,
+                hz: parseFloat(document.getElementById(`hz-${idx}`).value),
+                vel: parseInt(document.getElementById(`vel-${idx}`).value),
+                dur: parseInt(document.getElementById(`dur-${idx}`).value) || 0
+              };
+            })
+          };
+          await fetch('/api/play', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+        updateTineButtons();
+        setStatus(`Tine ${index} detenida`);
+      } catch (e) {
+        setStatus('Error al detener');
+      }
+    }
+
+    async function playAll() {
+      const payload = { mode: 'sustain', tines: [] };
+      tines.forEach((t, i) => {
+        payload.tines.push({
+          index: i,
+          hz: parseFloat(document.getElementById(`hz-${i}`).value),
+          vel: parseInt(document.getElementById(`vel-${i}`).value),
+          dur: parseInt(document.getElementById(`dur-${i}`).value) || 0
+        });
+        tineActive[i] = true;
+      });
+      try {
+        await fetch('/api/play', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        updateTineButtons();
+        setStatus('Tocando todas las tines');
+      } catch (e) {
+        setStatus('Error al tocar');
+      }
+    }
+
+    function updateTineButtons() {
+      tines.forEach((t, i) => {
+        const btn = document.getElementById(`play-btn-${i}`);
+        if (!btn) return;
+        if (tineActive[i]) {
+          btn.textContent = '⏹ Stop';
+          btn.className = 'btn btn-stop';
+        } else {
+          btn.textContent = '▶ Play';
+          btn.className = 'btn btn-play';
+        }
+      });
+    }
+
     async function stopAll() {
       try {
         await fetch('/api/stop', { method: 'POST' });
+        tineActive = {};
+        updateTineButtons();
         setStatus('Detenido');
       } catch (e) {
         setStatus('Error al detener');
