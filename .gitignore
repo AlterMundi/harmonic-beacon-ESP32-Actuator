@@ -5,3 +5,6 @@ __pycache__
 .cache
 include/constants_private.h
 compile_commands.json
+
+# Lattice task tracker
+.lattice/
