@@ -7,35 +7,35 @@
       "harmonic": 2,
       "pin": 25,
       "channel": 0,
-      "duty": 255
+      "duty": 128
     },
     {
       "name": "H3-150Hz",
       "harmonic": 3,
       "pin": 26,
       "channel": 2,
-      "duty": 255
+      "duty": 128
     },
     {
       "name": "H4-200Hz",
       "harmonic": 4,
       "pin": 27,
       "channel": 4,
-      "duty": 255
+      "duty": 128
     },
     {
       "name": "H5-250Hz",
       "harmonic": 5,
       "pin": 14,
       "channel": 6,
-      "duty": 255
+      "duty": 128
     },
     {
       "name": "H6-300Hz",
       "harmonic": 6,
       "pin": 12,
       "channel": 8,
-      "duty": 255
+      "duty": 128
     }
   ],
   "default_params": {

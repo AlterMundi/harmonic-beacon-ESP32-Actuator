@@ -11,11 +11,11 @@ static const struct {
   uint8_t pin;
   uint8_t duty;
 } DEFAULT_TINES[] = {
-  {"H2-100Hz", 2, 25, 255},
-  {"H3-150Hz", 3, 26, 255},
-  {"H4-200Hz", 4, 27, 255},
-  {"H5-250Hz", 5, 14, 255},
-  {"H6-300Hz", 6, 12, 255}
+  {"H2-100Hz", 2, 25, 128},
+  {"H3-150Hz", 3, 26, 128},
+  {"H4-200Hz", 4, 27, 128},
+  {"H5-250Hz", 5, 14, 128},
+  {"H6-300Hz", 6, 12, 128}
 };
 
 static const size_t DEFAULT_TINE_COUNT = sizeof(DEFAULT_TINES) / sizeof(DEFAULT_TINES[0]);
